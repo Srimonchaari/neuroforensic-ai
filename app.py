@@ -30,7 +30,7 @@ from PIL import Image as PILImage
 
 load_dotenv()
 
-MODEL      = "gemini-1.5-flash"
+MODEL      = "gemini-2.0-flash"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     f"{MODEL}:generateContent"
