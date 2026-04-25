@@ -1,10 +1,9 @@
 # NeuroForensic AI
-### Multi-modal forensic screening assistant for investigators
+### Pre-Autopsy Intelligence System
 
 ---
 
-**Project Idea & Owner:** [shreyabalki](https://github.com/shreyabalki)  
-**Contributor & Collaborator:** [Srimonchaari](https://github.com/Srimonchaari)
+**Project Owner:** [shreyabalki](https://github.com/shreyabalki)
 
 ---
 
