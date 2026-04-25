@@ -257,7 +257,7 @@ MODULE_META = {
 
 # ── OpenAI Agents ─────────────────────────────────────────────────────────────
 def _call_with_retry(client: openai.OpenAI, **kwargs) -> str:
-    delays = [5, 10, 15]
+    delays = [30, 60, 90]
     for attempt, delay in enumerate(delays, 1):
         try:
             resp = client.chat.completions.create(**kwargs)
@@ -265,11 +265,24 @@ def _call_with_retry(client: openai.OpenAI, **kwargs) -> str:
         except openai.RateLimitError:
             if attempt == len(delays):
                 raise
+            st.toast(f"Rate limit hit — retrying in {delay}s… (attempt {attempt}/3)")
             time.sleep(delay)
+
+
+def _compress_image(image_bytes: bytes, max_px: int = 512) -> tuple[bytes, str]:
+    """Resize to max_px on the longest side and return JPEG bytes + media type."""
+    from PIL import Image as PILImage
+    import io
+    img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+    img.thumbnail((max_px, max_px), PILImage.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    return buf.getvalue(), "image/jpeg"
 
 
 def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
     client = openai.OpenAI(api_key=_get_api_key())
+    image_bytes, media_type = _compress_image(image_bytes)
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     raw = _call_with_retry(
         client,
