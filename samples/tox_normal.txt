@@ -1,26 +1,51 @@
-TOXICOLOGY LABORATORY REPORT
-Patient ID: DEMO-001 | Specimen: Femoral Blood | Collection: Post-mortem
+SYNTHETIC DEMO TOXICOLOGY REPORT — NOT REAL PATIENT DATA
+Case ID: DEMO-TOX-001
+Specimen Type: Postmortem Blood, Central (femoral)
+Collection Date/Time: See case file
 
-SUBSTANCE SCREEN — IMMUNOASSAY
--------------------------------
-Ethanol (EtOH)          : 0.01 g/dL    [Reference < 0.08]  NORMAL
-Acetaminophen           : 8 mcg/mL     [Reference < 20]    NORMAL
-Salicylate              : < 5 mg/dL    [Reference < 30]    NORMAL
-Benzodiazepines         : Not Detected [Reference: ND]     NORMAL
-Opiates (morphine eq.)  : Not Detected [Reference: ND]     NORMAL
-Cocaine Metabolites     : Not Detected [Reference: ND]     NORMAL
-Amphetamines            : Not Detected [Reference: ND]     NORMAL
-Cannabis (THC-COOH)     : Not Detected [Reference: ND]     NORMAL
-Tricyclic Antidepressants: Not Detected [Reference: ND]    NORMAL
+============================================================
+TOXICOLOGY PANEL RESULTS
+============================================================
 
-METALS / VOLATILES
-------------------
-Carbon Monoxide (HbCO)  : 2%           [Reference < 5%]    NORMAL
-Cyanide                 : < 0.5 mcg/mL [Reference < 1.0]   NORMAL
-Lead (Pb)               : 4 mcg/dL     [Reference < 10]    NORMAL
+VOLATILE COMPOUNDS
+  Ethanol:              < 0.01 g/dL   [Reference < 0.08 g/dL]   WITHIN NORMAL LIMITS
 
-INTERPRETATION: No substances detected above reference thresholds.
-Findings consistent with unimpaired toxicological profile.
+DRUGS OF ABUSE SCREEN
+  Opioids (Screen):     Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
+  Benzodiazepines:      Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
+  Cocaine Metabolite:   Not detected   [Reference: Not detected]  WITHIN NORMAL LIMITS
+  Amphetamines:         Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
+  Cannabinoids (THC):   Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
 
-Dataset reference: MIMIC-IV Clinical Notes (PhysioNet)
-This is a demonstration sample — not real patient data.
+THERAPEUTIC DRUGS
+  Acetaminophen:        7.4 mcg/mL    [Reference < 20 mcg/mL]   WITHIN NORMAL LIMITS
+  Salicylate:           < 2.0 mg/dL   [Reference < 30 mg/dL]    WITHIN NORMAL LIMITS
+
+CARBON MONOXIDE / GAS
+  Carboxyhemoglobin:    1.1%          [Reference < 5%]           WITHIN NORMAL LIMITS
+
+HEAVY METALS (if requested)
+  Not requested for this panel.
+
+============================================================
+INTERPRETATION
+============================================================
+
+No toxic substances detected above established reference thresholds.
+No evidence of drug intoxication, chemical poisoning, or toxic exposure
+at or near the time of death. All screened analytes within normal limits.
+
+Confirmatory testing not indicated based on current results.
+Recommend correlation with clinical and scene findings by qualified pathologist.
+
+============================================================
+REPORT NOTES
+============================================================
+
+This is SYNTHETIC demo data generated for AI screening demonstration.
+No real patient information is contained in this report.
+Reference format based on MIMIC-IV forensic toxicology documentation style.
+Not for clinical, legal, or diagnostic use.
+
+Analyst: DEMO SYSTEM
+Laboratory: DEMO FORENSIC TOXICOLOGY LABORATORY

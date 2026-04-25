@@ -1,0 +1,78 @@
+SYNTHETIC DEMO TOXICOLOGY REPORT — NOT REAL PATIENT DATA
+Case ID: DEMO-TOX-003
+Specimen Type: Postmortem Blood (Central + Peripheral) + Vitreous Humor + Urine
+Collection Date/Time: See case file
+
+============================================================
+TOXICOLOGY PANEL RESULTS — CRITICAL FLAGS PRESENT
+============================================================
+
+VOLATILE COMPOUNDS
+  Ethanol:              0.38 g/dL    [Reference < 0.08 g/dL]    ** CRITICAL — UPPER LETHAL RANGE **
+
+DRUGS OF ABUSE SCREEN / CONFIRMATORY
+  Opioids (Screen):     POSITIVE
+    → Fentanyl (LC-MS): 24 ng/mL    [Reference < 2 ng/mL]      ** CRITICAL — LETHAL RANGE **
+    → Norfentanyl:      9 ng/mL     [Active metabolite]
+    → Morphine:         Not detected
+  Benzodiazepines:      POSITIVE
+    → Alprazolam:       680 ng/mL   [Reference < 200 ng/mL]    ** CRITICAL **
+    → 4-Hydroxyalprazolam: 210 ng/mL [Metabolite]
+  Cocaine Metabolite:   POSITIVE
+    → Benzoylecgonine:  380 ng/mL   [Reference: Not detected]  ** DETECTED **
+    → Cocaethylene:     95 ng/mL    [Ethanol + cocaine adduct] ** DETECTED **
+  Amphetamines:         Negative    [Reference: Negative]      WITHIN NORMAL LIMITS
+
+THERAPEUTIC DRUGS
+  Acetaminophen:        310 mcg/mL  [Reference < 20 mcg/mL]   ** CRITICAL — HEPATOTOXIC RANGE **
+  Salicylate:           52 mg/dL    [Reference < 30 mg/dL]    ** ELEVATED **
+
+CARBON MONOXIDE / INHALANTS
+  Carboxyhemoglobin:    24%         [Reference < 5%]           ** ELEVATED — SIGNIFICANT CO EXPOSURE **
+
+VITREOUS HUMOR (confirms ante-mortem levels)
+  Vitreous Ethanol:     0.34 g/dL   [Confirms antemortem exposure]
+  Vitreous Glucose:     Low         [Consistent with prolonged hypoglycemia]
+
+HEAVY METALS
+  Lead:                 Not tested this panel
+  Arsenic:              Not tested this panel
+
+============================================================
+INTERPRETATION
+============================================================
+
+MULTIPLE CRITICAL TOXIC FINDINGS PRESENT.
+
+1. Fentanyl at 24 ng/mL is within a range associated with fatal opioid
+   toxicity, particularly when combined with CNS depressants.
+
+2. Poly-substance toxidrome: concurrent fentanyl + alprazolam + ethanol
+   presents compounded respiratory depression risk.
+
+3. Cocaethylene formation (cocaine + ethanol adduct) indicates concurrent
+   ethanol and cocaine exposure, associated with increased cardiovascular risk.
+
+4. Acetaminophen at 310 mcg/mL is in the hepatotoxic range consistent
+   with acute overdose exposure.
+
+5. Carboxyhemoglobin at 24% indicates significant carbon monoxide
+   inhalation. Source (fire, vehicle exhaust, environmental) requires
+   scene correlation.
+
+IMMEDIATE expert forensic toxicologist review required.
+Causation of death CANNOT be determined from this report alone.
+Correlation with autopsy, scene investigation, and clinical history
+is mandatory.
+
+============================================================
+REPORT NOTES
+============================================================
+
+This is SYNTHETIC demo data generated for AI screening demonstration.
+No real patient information is contained in this report.
+Reference format based on MIMIC-IV forensic toxicology documentation style.
+Not for clinical, legal, or diagnostic use.
+
+Analyst: DEMO SYSTEM
+Laboratory: DEMO FORENSIC TOXICOLOGY LABORATORY

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NeuroForensic AI — Presentation</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #E8ECF2;
+  color: #1A1A2E;
+  line-height: 1.5;
+}
+
+/* ── Page / slide ── */
+.page {
+  width: 297mm;
+  height: 210mm;
+  margin: 0 auto 20px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+/* ── Shared layout helpers ── */
+.row   { display: flex; flex: 1; overflow: hidden; }
+.col   { display: flex; flex-direction: column; padding: 32px 36px; }
+.col-dark { background: linear-gradient(160deg, #0D1B2A 0%, #1B2A4A 100%); color: #fff; }
+.col-blue { background: #1565C0; color: #fff; }
+.col-light { background: #fff; }
+.col-offwhite { background: #F7F9FF; }
+
+.w30 { width: 30%; }
+.w35 { width: 35%; }
+.w40 { width: 40%; }
+.w50 { width: 50%; }
+.w60 { width: 60%; }
+.w65 { width: 65%; }
+.w70 { width: 70%; }
+
+/* ── Header bar ── */
+.slide-header {
+  background: linear-gradient(135deg, #0D1B2A 0%, #1565C0 100%);
+  padding: 16px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.slide-header-title { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+.slide-header-tag   { font-size: 10px; color: rgba(255,255,255,0.50); letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* ── Footer bar ── */
+.slide-footer {
+  background: #F0F2F8;
+  border-top: 1px solid #E0E4EE;
+  padding: 7px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.footer-left  { font-size: 9.5px; color: #999; }
+.footer-right { font-size: 9.5px; color: #BBB; font-style: italic; }
+
+/* ── Typography ── */
+.eyebrow {
+  font-size: 9px; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #1565C0; margin-bottom: 5px;
+}
+.eyebrow-white { color: rgba(255,255,255,0.45); }
+h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 8px; color: #1A1A2E; }
+h1.white { color: #fff; }
+.lead { font-size: 12px; color: #555; line-height: 1.65; margin-bottom: 14px; }
+.lead-white { font-size: 12px; color: rgba(255,255,255,0.62); line-height: 1.65; margin-bottom: 14px; }
+
+/* ── Stat boxes ── */
+.stat-row { display: flex; gap: 10px; margin: 10px 0; }
+.stat-box {
+  flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px; padding: 12px 10px; text-align: center;
+}
+.stat-box.light { background: #F0F4FF; border-color: #D4E0FF; }
+.stat-num   { font-size: 26px; font-weight: 900; color: #fff; line-height: 1; }
+.stat-num.blue { color: #1565C0; }
+.stat-lbl   { font-size: 10px; color: rgba(255,255,255,0.50); margin-top: 3px; line-height: 1.3; }
+.stat-lbl.dark { color: #888; }
+
+/* ── Bullet list ── */
+.blist { list-style: none; margin-top: 8px; }
+.blist li {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 11.5px; color: rgba(255,255,255,0.78); line-height: 1.45;
+}
+.blist.dark li { color: #333; border-bottom-color: #F0F0F0; }
+.blist li:last-child { border-bottom: none; }
+.bul { width: 6px; height: 6px; background: #1565C0; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.bul.white { background: rgba(255,255,255,0.45); }
+.bul.green { background: #43A047; }
+.bul.red   { background: #C62828; }
+
+/* ── Module cards ── */
+.mod-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+.mod-card {
+  background: #fff; border: 1px solid rgba(21,101,192,0.18);
+  border-left: 3px solid #1565C0; border-radius: 7px; padding: 10px 12px;
+}
+.mod-head { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.mod-icon { font-size: 18px; line-height: 1; }
+.mod-name { font-size: 11px; font-weight: 800; color: #1565C0; }
+.mod-desc { font-size: 10px; color: #444; line-height: 1.4; margin-bottom: 4px; }
+.mod-ds   { font-size: 9px; color: #AAA; font-style: italic; }
+
+/* ── Pipeline steps ── */
+.pipe { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.pipe-step {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.06); border-left: 2px solid #1565C0;
+  border-radius: 0 6px 6px 0; padding: 8px 12px;
+}
+.pipe-num {
+  width: 22px; height: 22px; background: #1565C0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.pipe-main { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.90); }
+.pipe-sub  { font-size: 10px; color: rgba(255,255,255,0.42); margin-top: 1px; }
+
+/* ── Tech cards ── */
+.tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.tech-card {
+  background: #F7F9FF; border: 1px solid #DDE8FF; border-radius: 7px;
+  padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px;
+}
+.tech-icon { font-size: 20px; flex-shrink: 0; }
+.tech-name { font-size: 11.5px; font-weight: 700; color: #1A1A2E; margin-bottom: 2px; }
+.tech-desc { font-size: 10px; color: #666; line-height: 1.45; }
+
+/* ── Severity ── */
+.sev-row { display: flex; gap: 8px; margin: 10px 0; }
+.sev-card { flex: 1; border-radius: 7px; padding: 12px 10px; text-align: center; }
+.sev-n { background: rgba(46,125,50,0.10); border: 1px solid rgba(46,125,50,0.30); }
+.sev-s { background: rgba(230,81,0,0.10);  border: 1px solid rgba(230,81,0,0.30);  }
+.sev-c { background: rgba(183,28,28,0.10); border: 1px solid rgba(183,28,28,0.30); }
+.sev-lv { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
+.sev-tx { font-size: 10px; line-height: 1.35; }
+.cn { color: #2E7D32; }  .co { color: #BF360C; }  .cr { color: #B71C1C; }
+
+/* ── Dataset table ── */
+.dtable { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10.5px; }
+.dtable th { background: #0D1B2A; color: rgba(255,255,255,0.75); padding: 7px 10px; text-align: left; font-size: 9px; letter-spacing: 0.6px; text-transform: uppercase; }
+.dtable td { padding: 7px 10px; border-bottom: 1px solid #F0F0F0; color: #333; }
+.dtable tr:last-child td { border-bottom: none; }
+.dtable tr:nth-child(even) td { background: #FAFAFA; }
+.pill { background: rgba(21,101,192,0.10); color: #1565C0; border-radius: 8px; padding: 1px 7px; font-size: 9px; font-weight: 700; }
+
+/* ── Ethics ── */
+.eth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.eth-card { border-radius: 7px; padding: 12px 14px; }
+.eth-is  { background: rgba(46,125,50,0.07);  border: 1px solid rgba(46,125,50,0.22); }
+.eth-not { background: rgba(183,28,28,0.07);  border: 1px solid rgba(183,28,28,0.22); }
+.eth-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.eth-lg { color: #2E7D32; }  .eth-lr { color: #B71C1C; }
+.eth-item { font-size: 10.5px; color: #333; padding: 3px 0; border-bottom: 1px solid rgba(128,128,128,0.07); line-height: 1.4; }
+.eth-item:last-child { border-bottom: none; }
+
+/* ── Future ── */
+.fut-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 10px; }
+.fut-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.11); border-radius: 7px; padding: 12px 12px; }
+.fut-ico { font-size: 20px; margin-bottom: 6px; }
+.fut-ttl { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.fut-dsc { font-size: 10px; color: rgba(255,255,255,0.48); line-height: 1.4; }
+
+/* ── Cover ── */
+.cover-body {
+  flex: 1; background: linear-gradient(135deg, #0D1B2A 0%, #1B2A4A 60%, #0D2137 100%);
+  display: flex; align-items: center; padding: 36px 48px; gap: 40px;
+}
+.cover-left { flex: 1; }
+.cover-right { width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.cover-brain { font-size: 72px; line-height: 1; margin-bottom: 14px; }
+.cover-title { font-size: 40px; font-weight: 900; color: #fff; letter-spacing: -1px; line-height: 1.05; margin-bottom: 6px; }
+.cover-sub   { font-size: 14px; color: rgba(255,255,255,0.55); margin-bottom: 18px; line-height: 1.4; }
+.cover-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.78);
+  border: 1px solid rgba(255,255,255,0.16); padding: 4px 12px;
+  border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
+}
+.cover-stat-box {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 9px; padding: 14px 12px; text-align: center;
+}
+.cover-stat-num { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; }
+.cover-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.42); margin-top: 4px; line-height: 1.35; }
+
+/* ── Schema box ── */
+.schema {
+  background: #0D1B2A; border-radius: 7px; padding: 12px 14px;
+  font-family: "SF Mono","Fira Code","Consolas",monospace;
+  font-size: 10px; line-height: 1.7; color: #A8D8EA;
+  margin-top: 10px; flex: 1;
+}
+.sk { color: #81C784; }  .sv { color: #FFD54F; }  .sa { color: #CE93D8; }
+
+/* ── Print ── */
+@media print {
+  body { background: #fff; }
+  .page { margin: 0; box-shadow: none; page-break-after: always; width: 100%; height: 100vh; }
+  @page { size: A4 landscape; margin: 0; }
+  .no-print { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+  PAGE 1 — COVER
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover-body">
+    <div class="cover-left">
+      <div class="cover-brain">🧠</div>
+      <div class="cover-title">NeuroForensic AI</div>
+      <div class="cover-sub">Multi-Modal Death Investigation Assistant<br>Structured forensic screening in under 60 seconds</div>
+      <div class="cover-chips">
+        <span class="chip">6 Forensic Modules</span>
+        <span class="chip">Gemini 2.5 Flash</span>
+        <span class="chip">INTERPOL DVI Protocol</span>
+        <span class="chip">Build with Healthcare Track</span>
+      </div>
+    </div>
+    <div class="cover-right">
+      <div class="cover-stat-box">
+        <div class="cover-stat-num">2M+</div>
+        <div class="cover-stat-lbl">Deaths uninvestigated globally per year</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-num">~150</div>
+        <div class="cover-stat-lbl">Forensic pathologists per 100 million people</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-num">&lt;60s</div>
+        <div class="cover-stat-lbl">Time to structured forensic report with this tool</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span class="footer-left">Healthcare AI Hackathon · Author: Aman</span>
+    <span class="footer-right">For demonstration purposes only · Not for clinical or legal use</span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+  PAGE 2 — PROBLEM + SOLUTION
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="slide-header">
+    <span class="slide-header-title">Problem &amp; Solution</span>
+    <span class="slide-header-tag">NeuroForensic AI</span>
+  </div>
+
+  <div class="row">
+    <!-- Left: Problem -->
+    <div class="col col-dark w40">
+      <div class="eyebrow eyebrow-white">The Problem</div>
+      <h1 class="white" style="font-size:20px">No fast unified tool for field investigators</h1>
+      <p class="lead-white">Investigators in low-resource settings must wait days for specialist review — across body evidence, brain scans, and toxicology separately. Cases go cold.</p>
+
+      <ul class="blist" style="margin-top:4px">
+        <li><span class="bul white"></span><strong>Geographic barrier</strong> — specialists concentrated in cities, unreachable for rural investigators</li>
+        <li><span class="bul white"></span><strong>Time barrier</strong> — days of wait time; evidence degrades, suspects move</li>
+        <li><span class="bul white"></span><strong>Multi-modal gap</strong> — radiology, toxicology, and trauma analysis exist in separate siloed tools</li>
+        <li><span class="bul white"></span><strong>Cost barrier</strong> — sending physical samples or images to labs is slow and expensive</li>
+      </ul>
+    </div>
+
+    <!-- Right: Solution -->
+    <div class="col col-light w60">
+      <div class="eyebrow">The Solution</div>
+      <h1 style="font-size:20px">NeuroForensic AI — any investigator, anywhere</h1>
+      <p class="lead">Upload evidence → AI analyzes → structured report in under 60 seconds. No specialist on-site required. Runs from a laptop.</p>
+
+      <div class="pipe">
+        <div class="pipe-step" style="background:#F0F4FF;border-left-color:#1565C0">
+          <div class="pipe-num">1</div>
+          <div><div class="pipe-main" style="color:#1A1A2E">Select forensic module</div><div class="pipe-sub" style="color:#888">Chest X-ray · Brain MRI · Toxicology · Trauma · More</div></div>
+        </div>
+        <div class="pipe-step" style="background:#F0F4FF;border-left-color:#1565C0">
+          <div class="pipe-num">2</div>
+          <div><div class="pipe-main" style="color:#1A1A2E">Upload or select demo evidence</div><div class="pipe-sub" style="color:#888">Medical image (JPEG/PNG) or lab report text (.txt)</div></div>
+        </div>
+        <div class="pipe-step" style="background:#F0F4FF;border-left-color:#1565C0">
+          <div class="pipe-num">3</div>
+          <div><div class="pipe-main" style="color:#1A1A2E">Gemini 2.5 Flash analyzes with forensic prompt</div><div class="pipe-sub" style="color:#888">Vision + NLP · Strict JSON output · Validated schema</div></div>
+        </div>
+        <div class="pipe-step" style="background:#F0F4FF;border-left-color:#1565C0">
+          <div class="pipe-num">4</div>
+          <div><div class="pipe-main" style="color:#1A1A2E">Structured report card + annotated image</div><div class="pipe-sub" style="color:#888">Severity · Findings · Interpretation · Investigator Action</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="footer-left">NeuroForensic AI — Healthcare Hackathon Demo</span>
+    <span class="footer-right">All outputs require expert validation before any action</span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+  PAGE 3 — 6 MODULES + REPORT STRUCTURE
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="slide-header">
+    <span class="slide-header-title">6 Forensic Modules + Report Output</span>
+    <span class="slide-header-tag">NeuroForensic AI</span>
+  </div>
+
+  <div class="row">
+    <!-- Left: modules -->
+    <div class="col col-light w60" style="padding-top:22px;padding-bottom:18px">
+      <div class="eyebrow">Evidence Modules</div>
+      <h1 style="font-size:19px;margin-bottom:4px">6 Module Types — 6 Evidence Categories</h1>
+      <p style="font-size:10.5px;color:#666;margin-bottom:10px">Each module has its own AI system prompt, accepted file types, sample set, and JSON schema.</p>
+
+      <div class="mod-grid">
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🫁</span><span class="mod-name">Chest X-ray</span></div>
+          <div class="mod-desc">Lung opacity · Fluid · Pneumothorax · Rib fractures · Mediastinal widening</div>
+          <div class="mod-ds">NIH ChestX-ray14 — 112,000 images</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🧠</span><span class="mod-name">Brain MRI / CT</span></div>
+          <div class="mod-desc">Hemorrhage · Masses · Edema · Midline shift · Hemispheric asymmetry</div>
+          <div class="mod-ds">BraTS 2023 — multi-modal MRI</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🦴</span><span class="mod-name">Full Body CT</span></div>
+          <div class="mod-desc">Fractures · Internal bleeding · Organ anomalies · Soft tissue disruption</div>
+          <div class="mod-ds">RSNA Hemorrhage — 25,000 scans</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🧪</span><span class="mod-name">Toxicology Report</span></div>
+          <div class="mod-desc">Opioids · Alcohol · Benzos · Stimulants · Poisons · Poly-substance flags</div>
+          <div class="mod-ds">MIMIC-IV Clinical Notes</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">📷</span><span class="mod-name">External Trauma</span></div>
+          <div class="mod-desc">Ligature marks · Bruising · Petechiae · Lacerations · INTERPOL DVI language</div>
+          <div class="mod-ds">INTERPOL DVI Protocol</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">⚡</span><span class="mod-name">Brain Pattern</span></div>
+          <div class="mod-desc">Occipital anomalies · Hippocampal asymmetry · Diffuse axonal injury indicators</div>
+          <div class="mod-ds">BraTS 2023 + EEG-ImageNet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: report + severity -->
+    <div class="col col-dark w40" style="padding-top:22px;padding-bottom:18px">
+      <div class="eyebrow eyebrow-white">Report Structure</div>
+      <h1 class="white" style="font-size:17px;margin-bottom:4px">14-Field Structured JSON</h1>
+      <div class="schema">
+<span class="sk">"case_summary"</span>: <span class="sv">"Bilateral opacities..."</span><br>
+<span class="sk">"anomalies"</span>: <span class="sv">"Yes"</span><br>
+<span class="sk">"confidence"</span>: <span class="sv">"Medium"</span><br>
+<span class="sk">"suspected_region"</span>: <span class="sv">"Bilateral lungs"</span><br>
+<span class="sk">"key_findings"</span>: <span class="sa">["...", "..."]</span><br>
+<span class="sk">"medical_interpretation"</span>: <span class="sv">"..."</span><br>
+<span class="sk">"forensic_relevance"</span>: <span class="sv">"..."</span><br>
+<span class="sk">"differential_considerations"</span>: <span class="sa">["..."]</span><br>
+<span class="sk">"recommended_next_steps"</span>: <span class="sa">["..."]</span><br>
+<span class="sk">"investigator_action"</span>: <span class="sv">"Escalate..."</span><br>
+<span class="sk">"severity"</span>: <span class="sv">"Suspicious"</span><br>
+<span class="sk">"visual_annotations"</span>: <span class="sa">[{x,y,w,h}]</span><br>
+<span class="sk">"disclaimer"</span>: <span class="sv">"Expert review..."</span>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="sev-row">
+          <div class="sev-card sev-n"><div class="sev-lv cn">✓ Normal</div><div class="sev-tx cn">No anomalies in observable range</div></div>
+          <div class="sev-card sev-s"><div class="sev-lv co">⚠ Suspicious</div><div class="sev-tx co">Warrants specialist review</div></div>
+          <div class="sev-card sev-c"><div class="sev-lv cr">🔴 Critical</div><div class="sev-tx cr">Urgent expert consultation</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="footer-left">NeuroForensic AI — Healthcare Hackathon Demo</span>
+    <span class="footer-right">All outputs require expert validation before any action</span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+  PAGE 4 — TECH STACK + DATASETS
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="slide-header">
+    <span class="slide-header-title">Technology Stack &amp; Datasets</span>
+    <span class="slide-header-tag">NeuroForensic AI</span>
+  </div>
+
+  <div class="row">
+    <!-- Left: Tech -->
+    <div class="col col-offwhite w45" style="padding-top:22px;padding-bottom:18px">
+      <div class="eyebrow">Technology</div>
+      <h1 style="font-size:19px;margin-bottom:4px">Lightweight — Runs from a Laptop</h1>
+      <p style="font-size:10.5px;color:#666;margin-bottom:6px">No GPU, no local model weights. All inference through Gemini API. 4 pip dependencies.</p>
+
+      <div class="tech-grid">
+        <div class="tech-card">
+          <span class="tech-icon">⚡</span>
+          <div>
+            <div class="tech-name">Gemini 2.5 Flash</div>
+            <div class="tech-desc">Vision + text inference. Free tier: 15 req/min, 1,500/day. No credit card needed.</div>
+          </div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">🖥</span>
+          <div>
+            <div class="tech-name">Streamlit</div>
+            <div class="tech-desc">Python web UI. Session state, sidebar history, file upload, real-time progress.</div>
+          </div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">🖼</span>
+          <div>
+            <div class="tech-name">Pillow (PIL)</div>
+            <div class="tech-desc">Image resize for API upload. Bounding-box annotation drawing. No OpenCV required.</div>
+          </div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">🐍</span>
+          <div>
+            <div class="tech-name">Python 3.10+</div>
+            <div class="tech-desc">requests · python-dotenv · json/re for parsing and graceful fallback handling.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;background:#EEF4FF;border:1px solid #C5D8FF;border-radius:7px;padding:9px 12px;font-size:10px;color:#1565C0">
+        <strong>Deploy:</strong> &nbsp;Streamlit Cloud (streamlit.app) · Add <code>GEMINI_API_KEY</code> to Secrets · Zero infrastructure setup
+      </div>
+    </div>
+
+    <!-- Right: Datasets -->
+    <div class="col col-light w55" style="padding-top:22px;padding-bottom:18px">
+      <div class="eyebrow">Data Foundation</div>
+      <h1 style="font-size:19px;margin-bottom:4px">6 Real Public Clinical Datasets</h1>
+      <p style="font-size:10.5px;color:#666;margin-bottom:2px">No private patient data. All datasets publicly accessible for research.</p>
+
+      <table class="dtable">
+        <thead>
+          <tr>
+            <th>Dataset</th>
+            <th>Module</th>
+            <th>Scale</th>
+            <th>Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>NIH ChestX-ray14</strong></td>
+            <td>🫁 Chest X-ray</td>
+            <td>112,000 images</td>
+            <td><span class="pill">Public domain</span></td>
+          </tr>
+          <tr>
+            <td><strong>BraTS 2023</strong></td>
+            <td>🧠 Brain MRI · ⚡ Pattern</td>
+            <td>Multi-modal MRI</td>
+            <td><span class="pill">Free academic</span></td>
+          </tr>
+          <tr>
+            <td><strong>RSNA Hemorrhage</strong></td>
+            <td>🦴 Full Body CT</td>
+            <td>25,000 CT scans</td>
+            <td><span class="pill">Kaggle public</span></td>
+          </tr>
+          <tr>
+            <td><strong>MIMIC-IV</strong></td>
+            <td>🧪 Toxicology</td>
+            <td>300,000+ records</td>
+            <td><span class="pill">Credentialed</span></td>
+          </tr>
+          <tr>
+            <td><strong>EEG-ImageNet</strong></td>
+            <td>⚡ Brain Pattern</td>
+            <td>EEG + visual pairs</td>
+            <td><span class="pill">Research</span></td>
+          </tr>
+          <tr>
+            <td><strong>INTERPOL DVI</strong></td>
+            <td>📷 External Trauma</td>
+            <td>Protocol standard</td>
+            <td><span class="pill">Public standard</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="footer-left">NeuroForensic AI — Healthcare Hackathon Demo</span>
+    <span class="footer-right">All outputs require expert validation before any action</span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+  PAGE 5 — ETHICS + FUTURE + CLOSING
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="slide-header">
+    <span class="slide-header-title">Ethics, Guardrails &amp; Roadmap</span>
+    <span class="slide-header-tag">NeuroForensic AI</span>
+  </div>
+
+  <div class="row">
+    <!-- Left: Ethics -->
+    <div class="col col-light w50" style="padding-top:22px;padding-bottom:18px">
+      <div class="eyebrow">Ethical Framework</div>
+      <h1 style="font-size:19px;margin-bottom:4px">Safety Built Into Every Layer</h1>
+      <p style="font-size:10.5px;color:#666;margin-bottom:4px">Every design decision prioritises investigator safety and prevents over-reliance on AI output.</p>
+
+      <div class="eth-grid">
+        <div class="eth-card eth-is">
+          <div class="eth-label eth-lg">✓ What it IS</div>
+          <div class="eth-item">AI-powered forensic screening tool</div>
+          <div class="eth-item">Decision-support for investigators</div>
+          <div class="eth-item">INTERPOL DVI protocol-aligned language</div>
+          <div class="eth-item">Mandatory expert-review disclaimer on every report</div>
+          <div class="eth-item">Only public anonymised datasets used</div>
+        </div>
+        <div class="eth-card eth-not">
+          <div class="eth-label eth-lr">✗ What it is NOT</div>
+          <div class="eth-item">Not a clinical diagnostic tool</div>
+          <div class="eth-item">Not a cause-of-death determiner</div>
+          <div class="eth-item">Not a legal evidence generator</div>
+          <div class="eth-item">Not trained on private patient data</div>
+          <div class="eth-item">Not a replacement for pathologists</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;background:#FFF8E1;border:1px solid #F9A825;border-radius:7px;padding:9px 12px;font-size:10px;color:#4E342E">
+        <strong>Prompt guardrails:</strong> AI is explicitly prohibited from naming diseases, stating cause of death, inventing demographics, or claiming certainty. All findings use hedged language — "consistent with", "suggests", "warrants review".
+      </div>
+    </div>
+
+    <!-- Right: Future + Closing -->
+    <div class="col col-dark w50" style="padding-top:22px;padding-bottom:18px">
+      <div class="eyebrow eyebrow-white">Roadmap</div>
+      <h1 class="white" style="font-size:19px;margin-bottom:4px">What This Could Become</h1>
+      <p class="lead-white" style="margin-bottom:8px">The architecture is modular — each module is independently extensible.</p>
+
+      <div class="fut-grid">
+        <div class="fut-card">
+          <div class="fut-ico">🧬</div>
+          <div class="fut-ttl">Fine-Tuned Model</div>
+          <div class="fut-dsc">Train on anonymised forensic case data for higher accuracy</div>
+        </div>
+        <div class="fut-card">
+          <div class="fut-ico">📱</div>
+          <div class="fut-ttl">Mobile Field App</div>
+          <div class="fut-dsc">On-scene smartphone capture with instant triage output</div>
+        </div>
+        <div class="fut-card">
+          <div class="fut-ico">⚡</div>
+          <div class="fut-ttl">Live EEG Hardware</div>
+          <div class="fut-dsc">Real BCI signal → brain state classification pipeline</div>
+        </div>
+        <div class="fut-card">
+          <div class="fut-ico">🌍</div>
+          <div class="fut-ttl">WHO / INTERPOL</div>
+          <div class="fut-dsc">Partner with WHO Digital Health and INTERPOL DVI teams</div>
+        </div>
+        <div class="fut-card">
+          <div class="fut-ico">🔒</div>
+          <div class="fut-ttl">Offline Mode</div>
+          <div class="fut-dsc">Local quantized model for zero-connectivity field deployments</div>
+        </div>
+        <div class="fut-card">
+          <div class="fut-ico">📦</div>
+          <div class="fut-ttl">Batch Processing</div>
+          <div class="fut-dsc">Multi-case analysis for mass casualty events</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;text-align:center;padding-top:10px;border-top:1px solid rgba(255,255,255,0.10)">
+        <div style="font-size:11px;color:rgba(255,255,255,0.40);margin-bottom:4px">BUILT WITH</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <span class="chip">⚡ Gemini 2.5 Flash</span>
+          <span class="chip">🖥 Streamlit</span>
+          <span class="chip">🐍 Python</span>
+          <span class="chip">Healthcare AI Hackathon</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="footer-left">NeuroForensic AI · Author: Aman · Healthcare AI Hackathon</span>
+    <span class="footer-right">For demonstration purposes only · Not for clinical or legal use · No real patient data used or stored</span>
+  </div>
+</div>
+
+<p class="no-print" style="text-align:center;padding:16px;font-size:11px;color:#AAA;font-style:italic">
+  To save as PDF: File → Print → Save as PDF · Paper: A4 Landscape · Margins: None · Background graphics: On
+</p>
+
+</body>
+</html>

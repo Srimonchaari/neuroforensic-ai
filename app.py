@@ -1,20 +1,8 @@
 """
-NeuroForensic AI — Multi-Modal Death Investigation Assistant
+Forensic AI — Multi-Modal Death Investigation Assistant
 ============================================================
-Author: Aman
-Track: Build with Healthcare
-AI Provider: Google Gemini 1.5 Flash (vision + text)
-
-Modules:
-  1. Chest X-ray       — lung opacity, fluid, structural anomaly
-  2. Brain MRI / CT    — tumor, lesion, mass, midline shift
-  3. Full Body CT      — trauma, bleeding, fractures
-  4. Toxicology Report — poisoning via NLP on lab report text
-  5. External Trauma   — hanging, strangulation, blunt force (scene photo)
-  6. Brain Pattern     — neurological trauma patterns (EEG-ImageNet grounded)
-
-Grounded by: CLAUDE.md, agents/forensic_agent.md,
-             agents/output_agent.md, agents/neuro_agent.md
+Author: Aman | Track: Build with Healthcare | AI: Gemini Flash
+Decision-support forensic screening prototype — not for clinical or legal use.
 """
 
 import streamlit as st
@@ -22,22 +10,27 @@ import requests as http
 import base64
 import json
 import os
+import re
 import time
 import io
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageDraw, ImageFont
 
 load_dotenv()
 
-MODEL      = "gemini-2.0-flash"
+MODEL      = "gemini-2.5-flash"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     f"{MODEL}:generateContent"
 )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# API key helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
 def _get_api_key() -> str | None:
-    """Read Gemini API key: Streamlit secrets → env var → sidebar input."""
     for candidate in [
         lambda: st.secrets.get("GEMINI_API_KEY", ""),
         lambda: os.getenv("GEMINI_API_KEY", ""),
@@ -53,7 +46,6 @@ def _get_api_key() -> str | None:
 
 
 def _verify_key(key: str) -> tuple[bool, str]:
-    """Ping Gemini with a minimal request to validate the key."""
     try:
         r = http.post(
             GEMINI_URL,
@@ -64,232 +56,547 @@ def _verify_key(key: str) -> tuple[bool, str]:
         )
         if r.ok:
             return True, "Key verified."
-        body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
-        msg = body.get("error", {}).get("message", r.text[:120])
-        return False, msg
+        body = (r.json() if r.headers.get("content-type", "").startswith("application/json") else {})
+        return False, body.get("error", {}).get("message", r.text[:120])
     except Exception as e:
         return False, str(e)
 
-# ── Page config ───────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Persistent history — stored in local JSON file, survives refresh
+# ─────────────────────────────────────────────────────────────────────────────
+HISTORY_FILE = Path("analysis_history.json")
+
+
+def _load_history() -> list:
+    try:
+        if HISTORY_FILE.exists():
+            return json.loads(HISTORY_FILE.read_text())
+    except Exception:
+        pass
+    return []
+
+
+def _save_history(history: list) -> None:
+    try:
+        HISTORY_FILE.write_text(json.dumps(history, indent=2))
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Page config  (must be first Streamlit call)
+# ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="NeuroForensic AI",
+    page_title="Forensic AI",
     page_icon="🧠",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="expanded",
 )
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-MAX_OUTPUT_TOKENS = 1024
+# ─────────────────────────────────────────────────────────────────────────────
+# Global CSS design system
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Layout ── */
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+[data-testid="stDeployButton"] { display: none !important; }
+[data-testid="stToolbarActions"] { visibility: hidden; }
+.block-container { padding-top: 1.5rem !important; max-width: 780px; }
+
+/* ═══════════════════════════════════════════════════════
+   HERO  — always dark gradient, works on any theme
+═══════════════════════════════════════════════════════ */
+.nf-hero {
+    background: linear-gradient(135deg, #0D1B2A 0%, #1B2A4A 60%, #0D2137 100%);
+    padding: 28px 32px 22px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.07);
+}
+.nf-hero-title { color:#FFF; font-size:28px; font-weight:800; letter-spacing:-0.5px; margin:0 0 4px; line-height:1.2; }
+.nf-hero-sub   { color:rgba(255,255,255,0.58); font-size:13px; margin:0 0 14px; }
+.nf-hero-chips { display:flex; gap:8px; flex-wrap:wrap; }
+.nf-chip {
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.80);
+    padding: 3px 11px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.3px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ═══════════════════════════════════════════════════════
+   STEP HEADER
+═══════════════════════════════════════════════════════ */
+.nf-step { display:flex; align-items:center; gap:12px; margin:28px 0 14px; }
+.nf-step-num {
+    background: #1565C0; color: #fff;
+    width:30px; height:30px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; flex-shrink:0;
+    box-shadow: 0 2px 6px rgba(21,101,192,0.40);
+}
+.nf-step-label { font-size:17px; font-weight:700; color:var(--text-color); letter-spacing:-0.2px; }
+
+/* ═══════════════════════════════════════════════════════
+   MODULE CARD
+═══════════════════════════════════════════════════════ */
+.nf-module-card {
+    background: rgba(21,101,192,0.07);
+    border: 1px solid rgba(21,101,192,0.25);
+    border-left: 4px solid #1565C0;
+    border-radius: 10px;
+    padding: 14px 18px; margin: 8px 0 16px;
+    display:flex; align-items:flex-start; gap:14px;
+}
+.nf-module-icon { font-size:30px; line-height:1; }
+.nf-module-name { font-size:15px; font-weight:700; color:#1565C0; margin:0 0 3px; }
+.nf-module-desc { font-size:13px; color:var(--text-color); opacity:0.75; margin:0 0 5px; }
+.nf-module-ds   { font-size:11px; color:var(--text-color); opacity:0.45; font-style:italic; margin:0; }
+
+/* ═══════════════════════════════════════════════════════
+   SEVERITY BANNER — semi-transparent tints, readable on
+   both light and dark backgrounds
+═══════════════════════════════════════════════════════ */
+.nf-severity {
+    display:flex; align-items:center; gap:10px;
+    padding:12px 20px; border-radius:10px;
+    font-weight:700; font-size:16px;
+    width:100%; box-sizing:border-box; margin-bottom:14px;
+}
+.sev-normal     { background:rgba(46,125,50,0.12);   color:#2E7D32; border:1.5px solid rgba(46,125,50,0.35); }
+.sev-suspicious { background:rgba(230,81,0,0.12);    color:#BF360C; border:1.5px solid rgba(230,81,0,0.35); }
+.sev-critical   { background:rgba(183,28,28,0.12);   color:#B71C1C; border:1.5px solid rgba(183,28,28,0.35); }
+
+/* dark-mode: lighten severity text so it reads on dark bg */
+[data-theme="dark"] .sev-normal     { color:#81C784; background:rgba(46,125,50,0.18);  border-color:rgba(46,125,50,0.45); }
+[data-theme="dark"] .sev-suspicious { color:#FFB74D; background:rgba(230,81,0,0.18);   border-color:rgba(230,81,0,0.45); }
+[data-theme="dark"] .sev-critical   { color:#E57373; background:rgba(183,28,28,0.18);  border-color:rgba(183,28,28,0.45); }
+
+/* ═══════════════════════════════════════════════════════
+   REPORT TITLE ROW
+═══════════════════════════════════════════════════════ */
+.nf-report-title { font-size:20px; font-weight:800; color:var(--text-color); margin:0; }
+.nf-report-mod   { font-size:13px; color:var(--text-color); opacity:0.50; margin-left:8px; }
+.nf-report-ds    { font-size:11px; color:var(--text-color); opacity:0.40; margin:4px 0 10px; }
+
+/* ═══════════════════════════════════════════════════════
+   CASE SUMMARY
+═══════════════════════════════════════════════════════ */
+.nf-summary {
+    background: rgba(21,101,192,0.06);
+    border-left: 3px solid #1565C0;
+    padding: 10px 16px; border-radius: 0 8px 8px 0;
+    font-size: 13.5px; color: var(--text-color);
+    opacity: 0.85; font-style: italic;
+    margin: 6px 0 16px; line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════
+   STAT CARDS
+═══════════════════════════════════════════════════════ */
+.nf-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:10px 0; }
+.nf-stat {
+    background: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.15);
+    border-radius: 10px; padding:13px 14px; text-align:center;
+}
+.stat-label {
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.9px; color:var(--text-color);
+    opacity:0.45; margin-bottom:5px;
+}
+.stat-value { font-size:19px; font-weight:800; color:var(--text-color); }
+
+/* ═══════════════════════════════════════════════════════
+   REGION
+═══════════════════════════════════════════════════════ */
+.nf-region {
+    background: rgba(21,101,192,0.07);
+    border: 1px solid rgba(21,101,192,0.22);
+    border-radius: 8px; padding:8px 14px;
+    font-size:13px; color:var(--text-color);
+    margin:10px 0 18px;
+    white-space:normal; overflow-wrap:anywhere; word-break:break-word;
+}
+.nf-region b { color:#1565C0; }
+
+/* ═══════════════════════════════════════════════════════
+   CONTENT CARDS
+═══════════════════════════════════════════════════════ */
+.nf-card {
+    background: var(--background-color);
+    border: 1px solid rgba(128,128,128,0.15);
+    border-radius: 12px; padding:16px 18px; margin:8px 0;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+[data-theme="dark"] .nf-card {
+    background: var(--secondary-background-color);
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: none;
+}
+.nf-card-title {
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.9px; color:var(--text-color); opacity:0.45; margin-bottom:10px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FINDING ITEMS
+═══════════════════════════════════════════════════════ */
+.nf-finding {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:7px 0; border-bottom:1px solid rgba(128,128,128,0.10);
+    font-size:13.5px; color:var(--text-color); line-height:1.55;
+}
+.nf-finding:last-child { border-bottom:none; padding-bottom:0; }
+.nf-dot { width:7px; height:7px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+.dot-normal     { background:#43A047; }
+.dot-suspicious { background:#EF6C00; }
+.dot-critical   { background:#C62828; }
+
+/* ═══════════════════════════════════════════════════════
+   TWO-COLUMN GRID
+═══════════════════════════════════════════════════════ */
+.nf-two-col { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0; }
+.nf-two-col .nf-card { margin:0; }
+
+/* ═══════════════════════════════════════════════════════
+   INVESTIGATOR ACTION CARD
+═══════════════════════════════════════════════════════ */
+.nf-action {
+    background: rgba(21,101,192,0.08);
+    border: 1px solid rgba(21,101,192,0.30);
+    border-radius: 10px; padding:14px 18px; margin:12px 0;
+}
+.nf-action-label {
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.9px; color:#1565C0; margin-bottom:6px;
+}
+.nf-action-text { font-size:14px; font-weight:600; color:var(--text-color); line-height:1.5; }
+
+[data-theme="dark"] .nf-action-label { color:#90CAF9; }
+
+/* ═══════════════════════════════════════════════════════
+   DISCLAIMER
+═══════════════════════════════════════════════════════ */
+.nf-disclaimer {
+    background: rgba(249,168,37,0.10);
+    border: 1px solid rgba(249,168,37,0.45);
+    border-radius: 8px; padding:10px 14px;
+    font-size:12px; color:var(--text-color);
+    opacity:0.85; margin:10px 0 2px; line-height:1.5;
+}
+[data-theme="dark"] .nf-disclaimer { opacity:1; }
+
+/* ═══════════════════════════════════════════════════════
+   IMAGE PANEL
+═══════════════════════════════════════════════════════ */
+.nf-img-panel { text-align:center; }
+.nf-img-label {
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.9px; color:var(--text-color); opacity:0.45;
+    margin-bottom:6px; display:block;
+}
+.nf-img-caption { font-size:11px; color:var(--text-color); opacity:0.40; font-style:italic; margin-top:4px; }
+
+/* ═══════════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════════ */
+.nf-footer {
+    background: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.15);
+    border-radius: 10px; padding:14px 18px;
+    font-size:11px; color:var(--text-color); opacity:0.70;
+    text-align:center; margin-top:28px; line-height:1.7;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════════ */
+.nf-sidebar-title {
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.9px; color:var(--text-color); opacity:0.45; margin:14px 0 8px;
+}
+.nf-api-badge {
+    padding:7px 12px; border-radius:8px;
+    font-size:12px; font-weight:600; text-align:center; margin:4px 0 10px;
+}
+.api-ok   { background:rgba(46,125,50,0.12);  color:#2E7D32; border:1px solid rgba(46,125,50,0.30); }
+.api-none { background:rgba(230,81,0,0.12);   color:#BF360C; border:1px solid rgba(230,81,0,0.30); }
+[data-theme="dark"] .api-ok   { color:#81C784; border-color:rgba(46,125,50,0.40); }
+[data-theme="dark"] .api-none { color:#FFB74D; border-color:rgba(230,81,0,0.40); }
+
+.nf-hist-card {
+    background: var(--background-color);
+    border: 1px solid rgba(128,128,128,0.15);
+    border-radius: 8px; padding:8px 10px; margin:5px 0; font-size:12px;
+}
+[data-theme="dark"] .nf-hist-card { background:var(--secondary-background-color); border-color:rgba(255,255,255,0.08); }
+.nf-hist-mod  { font-weight:600; color:var(--text-color); }
+.nf-hist-time { font-size:10px; color:var(--text-color); opacity:0.45; }
+.nf-hist-tags { margin-top:4px; display:flex; gap:5px; flex-wrap:wrap; }
+.nf-hist-tag  { font-size:10px; padding:2px 7px; border-radius:10px; font-weight:500; }
+
+.tag-normal     { background:rgba(46,125,50,0.12);  color:#2E7D32; }
+.tag-suspicious { background:rgba(230,81,0,0.12);   color:#BF360C; }
+.tag-critical   { background:rgba(183,28,28,0.12);  color:#B71C1C; }
+[data-theme="dark"] .tag-normal     { color:#81C784; background:rgba(46,125,50,0.20); }
+[data-theme="dark"] .tag-suspicious { color:#FFB74D; background:rgba(230,81,0,0.20); }
+[data-theme="dark"] .tag-critical   { color:#E57373; background:rgba(183,28,28,0.20); }
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Constants
+# ─────────────────────────────────────────────────────────────────────────────
+MAX_OUTPUT_TOKENS = 4096
 VALID_SEVERITIES  = ["Normal", "Suspicious", "Critical"]
 VALID_CONFIDENCES = ["Low", "Medium", "High"]
 
-SEVERITY_COLORS = {
-    "Normal":     {"bg": "#E1F5EE", "text": "#0F6E56", "label": "No Anomalies Detected"},
-    "Suspicious": {"bg": "#FAEEDA", "text": "#633806", "label": "Review Recommended"},
-    "Critical":   {"bg": "#FCEBEB", "text": "#791F1F", "label": "Urgent Review Required"},
+ANNO_COLOR = {
+    "Normal":     (0, 200, 83),
+    "Suspicious": (255, 109, 0),
+    "Critical":   (213, 0, 0),
 }
 
-# ── System prompts (from agents/forensic_agent.md) ────────────────────────────
-BASE_RULES = (
-    "Output ONLY valid JSON, no markdown. Describe only what is visually/textually "
-    "observable. Never diagnose, name diseases, or state cause of death. "
-    "Always recommend expert review."
-)
+SEV_CLASS  = {"Normal": "sev-normal", "Suspicious": "sev-suspicious", "Critical": "sev-critical"}
+SEV_ICON   = {"Normal": "✓", "Suspicious": "⚠", "Critical": "🔴"}
+SEV_LABEL  = {"Normal": "No Anomalies Detected", "Suspicious": "Review Recommended", "Critical": "Urgent Review Required"}
+DOT_CLASS  = {"Normal": "dot-normal", "Suspicious": "dot-suspicious", "Critical": "dot-critical"}
 
-SYSTEM_PROMPTS = {
-
-    "Chest X-ray": f"""You are a forensic screening assistant analyzing a CHEST X-RAY image.
-{BASE_RULES}
-Look for: lung opacity, pleural fluid, structural asymmetry,
-rib irregularities, mediastinal widening, unusual densities.
-
-Return ONLY this JSON:
-{{
-  "module": "Chest X-ray",
-  "anomalies_detected": true or false,
-  "findings": ["observation 1", "observation 2"],
-  "region": "Chest / Pulmonary",
-  "severity": "Normal" or "Suspicious" or "Critical",
-  "investigator_action": "one sentence",
-  "confidence": "Low" or "Medium" or "High",
-  "dataset_source": "NIH ChestX-ray14",
-  "disclaimer": "AI screening only. All findings require expert forensic review."
-}}""",
-
-    "Brain MRI / CT": f"""You are a forensic screening assistant analyzing a BRAIN MRI or CT SCAN image.
-{BASE_RULES}
-Look for: abnormal masses, lesions, hemispheric asymmetry,
-midline shift, density irregularities, structural disruption.
-
-Return ONLY this JSON:
-{{
-  "module": "Brain MRI / CT",
-  "anomalies_detected": true or false,
-  "findings": ["observation 1", "observation 2"],
-  "region": "Brain / Neurological",
-  "severity": "Normal" or "Suspicious" or "Critical",
-  "investigator_action": "one sentence",
-  "confidence": "Low" or "Medium" or "High",
-  "dataset_source": "BraTS 2023",
-  "disclaimer": "AI screening only. All findings require expert forensic review."
-}}""",
-
-    "Full Body CT": f"""You are a forensic screening assistant analyzing a FULL BODY CT SCAN image.
-{BASE_RULES}
-Look for: internal bleeding indicators, organ density anomalies,
-skeletal fractures, fluid in abnormal regions, soft tissue disruption.
-
-Return ONLY this JSON:
-{{
-  "module": "Full Body CT",
-  "anomalies_detected": true or false,
-  "findings": ["observation 1", "observation 2"],
-  "region": "Full Body / Trauma",
-  "severity": "Normal" or "Suspicious" or "Critical",
-  "investigator_action": "one sentence",
-  "confidence": "Low" or "Medium" or "High",
-  "dataset_source": "RSNA Hemorrhage Dataset",
-  "disclaimer": "AI screening only. All findings require expert forensic review."
-}}""",
-
-    "Toxicology Report": f"""You are a forensic screening assistant analyzing a TOXICOLOGY LAB REPORT text.
-{BASE_RULES}
-Look for: substances above reference thresholds, multi-substance
-flags, out-of-range chemical markers, abnormal compound levels.
-Reference substances by lab notation only — not common names.
-
-Return ONLY this JSON:
-{{
-  "module": "Toxicology Report",
-  "anomalies_detected": true or false,
-  "findings": ["observation 1", "observation 2"],
-  "region": "Toxicology / Chemical",
-  "severity": "Normal" or "Suspicious" or "Critical",
-  "investigator_action": "one sentence",
-  "confidence": "Low" or "Medium" or "High",
-  "dataset_source": "MIMIC-IV Clinical Notes",
-  "disclaimer": "AI screening only. All findings require expert forensic review."
-}}""",
-
-    "External Trauma Photo": f"""You are a forensic screening assistant analyzing a CRIME SCENE
-or BODY PHOTOGRAPH for external trauma indicators.
-Follow INTERPOL DVI (Disaster Victim Identification) protocol language.
-{BASE_RULES}
-Look for:
-- Ligature marks: location, angle (horizontal vs angled), width, continuity
-- Petechiae: presence in eyes or face
-- Bruise patterns: shape, distribution, finger spacing, nail impressions
-- Impact wounds: shape, edge character, single vs scattered distribution
-- Positional indicators: lividity pattern consistency
-
-Return ONLY this JSON:
-{{
-  "module": "External Trauma Photo",
-  "anomalies_detected": true or false,
-  "findings": ["observation 1", "observation 2"],
-  "region": "External / Surface",
-  "severity": "Normal" or "Suspicious" or "Critical",
-  "investigator_action": "one sentence",
-  "confidence": "Low" or "Medium" or "High",
-  "dataset_source": "INTERPOL DVI Protocol",
-  "disclaimer": "AI screening only. All findings require expert forensic review."
-}}""",
-
-    "Brain Pattern Analysis": f"""You are a forensic neuroscience screening assistant.
-Analyze this BRAIN MRI or CT for neurological trauma patterns.
-
-Scientific basis: EEG-ImageNet research demonstrates that brain
-activity patterns in the visual cortex, hippocampus, and prefrontal
-regions are consistent and decodable. Post-mortem neuroimaging
-reveals structural residue of what the brain experienced before death.
-{BASE_RULES}
-Look specifically for:
-- Visual cortex (occipital lobe) density or structural anomalies
-- Hippocampal asymmetry or volume irregularity
-- Prefrontal region density changes
-- Watershed zone patterns (border-zone ischemia)
-- Diffuse axonal injury indicators across white matter
-- Deep brain hemorrhagic pattern distribution
-- Brainstem compression or density anomalies
-
-Return ONLY this JSON:
-{{
-  "module": "Brain Pattern Analysis",
-  "anomalies_detected": true or false,
-  "findings": ["observation 1", "observation 2"],
-  "region": "Brain / Neurological Pattern",
-  "severity": "Normal" or "Suspicious" or "Critical",
-  "investigator_action": "one sentence",
-  "confidence": "Low" or "Medium" or "High",
-  "dataset_source": "BraTS 2023 + EEG-ImageNet",
-  "disclaimer": "AI screening only. All findings require expert forensic review."
-}}""",
-}
-
-# ── Module metadata ───────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Module metadata
+# ─────────────────────────────────────────────────────────────────────────────
 MODULE_META = {
     "Chest X-ray": {
-        "icon": "🫁", "input_type": "image",
+        "icon": "🫁",
+        "input_type": "image",
         "description": "Detects lung opacity, fluid, structural anomalies",
         "dataset": "NIH ChestX-ray14 — 112,000 images",
         "samples": {
             "Normal chest scan":     "samples/chest_normal.jpg",
             "Suspicious chest scan": "samples/chest_suspicious.jpg",
             "Critical chest scan":   "samples/chest_critical.jpg",
-        }
+        },
     },
     "Brain MRI / CT": {
-        "icon": "🧠", "input_type": "image",
-        "description": "Detects tumors, lesions, mass, midline shift",
+        "icon": "🧠",
+        "input_type": "image",
+        "description": "Detects tumors, lesions, mass effect, midline shift",
         "dataset": "BraTS 2023 — multi-modal brain MRI",
         "samples": {
             "Normal brain scan":     "samples/brain_normal.jpg",
             "Suspicious brain scan": "samples/brain_suspicious.jpg",
-        }
+        },
     },
     "Full Body CT": {
-        "icon": "🦴", "input_type": "image",
-        "description": "Detects trauma, internal bleeding, fractures",
+        "icon": "🦴",
+        "input_type": "image",
+        "description": "Detects trauma, internal bleeding, organ injuries, fractures",
         "dataset": "RSNA Hemorrhage — 25,000 CT scans",
         "samples": {
-            "Normal body CT":  "samples/body_normal.jpg",
-            "Trauma body CT":  "samples/body_trauma.jpg",
-        }
+            "Normal body CT": "samples/body_normal.jpg",
+            "Trauma body CT": "samples/body_trauma.jpg",
+        },
     },
     "Toxicology Report": {
-        "icon": "🧪", "input_type": "text",
-        "description": "Detects poisoning via lab report NLP analysis",
+        "icon": "🧪",
+        "input_type": "text",
+        "description": "Detects drug levels, toxic substances via lab report NLP",
         "dataset": "MIMIC-IV Clinical Notes (PhysioNet)",
         "samples": {
             "Normal tox report":     "samples/tox_normal.txt",
             "Suspicious tox report": "samples/tox_suspicious.txt",
-        }
+            "Critical tox report":   "samples/tox_critical.txt",
+        },
     },
     "External Trauma Photo": {
-        "icon": "📷", "input_type": "image",
-        "description": "Detects hanging, strangulation, blunt force from scene photos",
+        "icon": "📷",
+        "input_type": "image",
+        "description": "Detects ligature marks, bruising, wounds from scene photos",
         "dataset": "INTERPOL DVI Protocol Standards",
-        "samples": {
-            "Upload a scene photo": None,
-        }
+        "samples": {},
     },
-    "Brain Pattern Analysis": {
-        "icon": "⚡", "input_type": "image",
-        "description": "Neurological trauma patterns — EEG-ImageNet grounded",
-        "dataset": "BraTS 2023 + EEG-ImageNet (Spampinato et al.)",
+    "Deep Brain Screening": {
+        "icon": "⚡",
+        "input_type": "image",
+        "description": "Deep structural screening of brain MRI/CT for forensic trauma patterns",
+        "dataset": "BraTS 2023 — multi-modal brain MRI",
         "samples": {
             "Normal brain scan":     "samples/brain_normal.jpg",
             "Suspicious brain scan": "samples/brain_suspicious.jpg",
-        }
+        },
     },
 }
 
-# ── Gemini Agents ─────────────────────────────────────────────────────────────
-MIN_CALL_INTERVAL = 6  # seconds — enforces ~10 RPM, well under free-tier 15 RPM
+# ─────────────────────────────────────────────────────────────────────────────
+# System prompts
+# ─────────────────────────────────────────────────────────────────────────────
+_BASE_RULES = (
+    "Output ONLY valid JSON — no markdown fences, no preamble. "
+    "Describe only what is visually or textually observable. "
+    "Never diagnose diseases or state cause of death. "
+    "Always include expert-review disclaimer. This is a demo only."
+)
+
+
+def _schema(module: str, dataset: str) -> str:
+    return (
+        "{\n"
+        f'  "module": "{module}",\n'
+        '  "case_summary": "one sentence overview of key finding",\n'
+        '  "anomalies": "Yes" or "No",\n'
+        '  "anomalies_detected": true or false,\n'
+        '  "confidence": "Low" or "Medium" or "High",\n'
+        '  "suspected_region": "specific anatomical area or region",\n'
+        '  "key_findings": ["finding 1", "finding 2", "finding 3"],\n'
+        '  "medical_interpretation": "brief interpretation of the findings",\n'
+        '  "forensic_relevance": "relevance to death investigation context",\n'
+        '  "differential_considerations": ["possibility 1", "possibility 2"],\n'
+        '  "recommended_next_steps": ["step 1", "step 2"],\n'
+        '  "investigator_action": "one sentence action recommendation",\n'
+        '  "severity": "Normal" or "Suspicious" or "Critical",\n'
+        '  "region": "broad anatomical label",\n'
+        '  "findings": ["finding 1", "finding 2"],\n'
+        '  "limitations": "brief limitations note for this analysis",\n'
+        f'  "dataset_source": "{dataset}",\n'
+        '  "disclaimer": "Demo only. Not clinical or legal advice. Expert review required.",\n'
+        '  "visual_annotations": [\n'
+        '    {"label": "region label", "x": 0.50, "y": 0.50, "w": 0.20, "h": 0.15}\n'
+        "  ]\n"
+        "}"
+    )
+
+
+SYSTEM_PROMPTS = {
+    "Chest X-ray": (
+        f"Forensic screening assistant — CHEST X-RAY image.\n{_BASE_RULES}\n"
+        "Look for: lung opacity, consolidation, pleural fluid, pneumothorax, "
+        "rib fractures, mediastinal widening, asymmetric densities.\n"
+        "Return ONLY:\n" + _schema("Chest X-ray", "NIH ChestX-ray14")
+    ),
+    "Brain MRI / CT": (
+        f"Forensic screening assistant — BRAIN MRI or CT SCAN.\n{_BASE_RULES}\n"
+        "Look for: abnormal masses, hemorrhage, edema, midline shift, "
+        "hemispheric asymmetry, density irregularities, structural disruption.\n"
+        "Return ONLY:\n" + _schema("Brain MRI / CT", "BraTS 2023")
+    ),
+    "Full Body CT": (
+        f"Forensic screening assistant — FULL BODY CT SCAN.\n{_BASE_RULES}\n"
+        "Look for: fractures, organ density anomalies, internal bleeding indicators, "
+        "fluid in abnormal regions, soft tissue disruption, lung findings.\n"
+        "Return ONLY:\n" + _schema("Full Body CT", "RSNA Hemorrhage Dataset")
+    ),
+    "Toxicology Report": (
+        f"Forensic screening assistant — TOXICOLOGY LAB REPORT text.\n{_BASE_RULES}\n"
+        "Look for: substances above reference thresholds, alcohol, opioids, "
+        "benzodiazepines, stimulants, poisons, poly-substance interactions, "
+        "overdose risk markers. Reference by lab notation only.\n"
+        "Return ONLY:\n" + _schema("Toxicology Report", "MIMIC-IV Clinical Notes")
+    ),
+    "External Trauma Photo": (
+        f"Forensic screening assistant — EXTERNAL TRAUMA PHOTO.\n{_BASE_RULES}\n"
+        "Follow INTERPOL DVI (Disaster Victim Identification) protocol language.\n"
+        "Look for: ligature marks (location, angle, width), petechiae, bruise "
+        "patterns (shape, distribution), lacerations, burns, impact wounds, "
+        "positional lividity indicators.\n"
+        "Return ONLY:\n" + _schema("External Trauma Photo", "INTERPOL DVI Protocol")
+    ),
+    "Deep Brain Screening": (
+        f"Forensic neuroradiology assistant — BRAIN MRI or CT structural screening.\n{_BASE_RULES}\n"
+        "Look for: deep white matter signal changes, hippocampal volume asymmetry, "
+        "occipital and parietal cortex density anomalies, watershed zone hypodensity, "
+        "diffuse axonal injury indicators, brainstem compression or density changes, "
+        "deep nuclei hemorrhagic foci, ventricular asymmetry.\n"
+        "Return ONLY:\n" + _schema("Deep Brain Screening", "BraTS 2023")
+    ),
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fallback result
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_fallback(module: str) -> dict:
+    return {
+        "module": module,
+        "case_summary": "API unavailable — demo fallback result shown.",
+        "anomalies": "No",
+        "anomalies_detected": False,
+        "confidence": "Low",
+        "suspected_region": "N/A",
+        "key_findings": ["API unavailable — check your Gemini key or quota and retry."],
+        "medical_interpretation": "Analysis could not be completed. API not reachable.",
+        "forensic_relevance": "No analysis available at this time.",
+        "differential_considerations": ["Manual expert review required"],
+        "recommended_next_steps": ["Verify API key at aistudio.google.com", "Retry analysis"],
+        "investigator_action": "Check API key validity and retry, or consult a forensic specialist.",
+        "severity": "Normal",
+        "region": module,
+        "findings": ["API unavailable — demo fallback result."],
+        "limitations": "API not reachable for this request.",
+        "dataset_source": MODULE_META[module]["dataset"],
+        "disclaimer": "Demo only. Not clinical or legal advice. Expert review required.",
+        "visual_annotations": [],
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Image annotation — PIL only
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fallback_annotations(module: str) -> list:
+    defaults = {
+        "Chest X-ray":           [{"label": "Possible opacity",  "x": 0.50, "y": 0.55, "w": 0.30, "h": 0.25}],
+        "Brain MRI / CT":        [{"label": "Suspected lesion",  "x": 0.45, "y": 0.45, "w": 0.25, "h": 0.20}],
+        "Full Body CT":          [{"label": "Abnormal density",  "x": 0.50, "y": 0.50, "w": 0.30, "h": 0.20}],
+        "External Trauma Photo": [{"label": "Visible injury",    "x": 0.50, "y": 0.40, "w": 0.35, "h": 0.25}],
+        "Deep Brain Screening":[{"label": "Structural anomaly", "x": 0.45, "y": 0.45, "w": 0.25, "h": 0.20}],
+    }
+    return defaults.get(module, [{"label": "Region of interest", "x": 0.5, "y": 0.5, "w": 0.25, "h": 0.20}])
+
+
+def annotate_image(image_bytes: bytes, result: dict, module: str) -> bytes:
+    img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+    draw = ImageDraw.Draw(img)
+    iw, ih = img.size
+    severity = result.get("severity", "Normal")
+    color = ANNO_COLOR.get(severity, (255, 109, 0))
+    annotations = result.get("visual_annotations") or []
+    if not annotations and severity != "Normal":
+        annotations = _fallback_annotations(module)
+    try:
+        font = ImageFont.load_default(size=14)
+    except TypeError:
+        font = ImageFont.load_default()
+    for ann in annotations:
+        label = ann.get("label", "Region of interest")
+        cx = float(ann.get("x", 0.5))
+        cy = float(ann.get("y", 0.5))
+        bw = float(ann.get("w", 0.2))
+        bh = float(ann.get("h", 0.15))
+        x1 = max(0, int((cx - bw / 2) * iw))
+        y1 = max(0, int((cy - bh / 2) * ih))
+        x2 = min(iw, int((cx + bw / 2) * iw))
+        y2 = min(ih, int((cy + bh / 2) * ih))
+        for t in range(3):
+            draw.rectangle([x1 - t, y1 - t, x2 + t, y2 + t], outline=color)
+        label_w = len(label) * 8 + 6
+        label_top = max(0, y1 - 20)
+        draw.rectangle([x1, label_top, x1 + label_w, y1], fill=color)
+        draw.text((x1 + 3, label_top + 2), label, fill=(255, 255, 255), font=font)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Rate limiting + Gemini API
+# ─────────────────────────────────────────────────────────────────────────────
+MIN_CALL_INTERVAL = 6
 
 
 @st.cache_resource
 def _rate_state() -> dict:
-    # Survives page reloads within the same server process
     return {"last_call": 0.0}
 
 
@@ -302,7 +609,7 @@ def _rate_limit_wait():
     bar = st.progress(0.0, text=f"Ready in {int(wait)}s…")
     for i in range(steps):
         time.sleep(0.1)
-        bar.progress((i + 1) / steps, text=f"Ready in {max(0, int(wait - (i+1)*0.1))}s…")
+        bar.progress((i + 1) / steps, text=f"Ready in {max(0, int(wait - (i + 1) * 0.1))}s…")
     bar.empty()
 
 
@@ -318,25 +625,20 @@ def _do_post(payload: dict) -> http.Response:
 def _gemini_post(payload: dict) -> str:
     _rate_limit_wait()
     _rate_state()["last_call"] = time.time()
-
     r = _do_post(payload)
-
     if r.status_code == 429:
-        # Retry after a full 65-second window
         for remaining in range(65, 0, -1):
             time.sleep(1)
             if remaining % 10 == 0:
                 st.toast(f"Rate limit — retrying in {remaining}s…")
         _rate_state()["last_call"] = time.time()
         r = _do_post(payload)
-
     if not r.ok:
         try:
             msg = r.json()["error"]["message"]
         except Exception:
             msg = r.text[:200]
         raise RuntimeError(f"{r.status_code}: {msg}")
-
     candidates = r.json().get("candidates", [])
     if not candidates:
         raise RuntimeError("Gemini returned no candidates — try again.")
@@ -344,7 +646,6 @@ def _gemini_post(payload: dict) -> str:
 
 
 def _compress_image(image_bytes: bytes, max_px: int = 512) -> tuple[str, str]:
-    """Returns (base64_string, mime_type) resized to max_px."""
     img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
     img.thumbnail((max_px, max_px), PILImage.LANCZOS)
     buf = io.BytesIO()
@@ -364,14 +665,11 @@ def _build_payload(system_prompt: str, parts: list) -> dict:
     }
 
 
-def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
+def run_image_agent(image_bytes: bytes, module: str) -> dict:
     b64, mime = _compress_image(image_bytes)
     payload = _build_payload(
         SYSTEM_PROMPTS[module],
-        [
-            {"inline_data": {"mime_type": mime, "data": b64}},
-            {"text": "Return JSON only."},
-        ],
+        [{"inline_data": {"mime_type": mime, "data": b64}}, {"text": "Return JSON only."}],
     )
     return _parse(_gemini_post(payload))
 
@@ -379,24 +677,20 @@ def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
 def run_text_agent(report_text: str, module: str) -> dict:
     payload = _build_payload(
         SYSTEM_PROMPTS[module],
-        [{"text": f"Analyze:\n\n{report_text}\n\nReturn JSON only."}],
+        [{"text": f"Analyze this lab report:\n\n{report_text}\n\nReturn JSON only."}],
     )
     return _parse(_gemini_post(payload))
 
 
 def _parse(raw: str) -> dict:
-    import re
     raw = raw.strip()
-    # Strip markdown fences (```json ... ``` or ``` ... ```)
     fence = re.search(r"```(?:json)?\s*(.*?)\s*```", raw, re.DOTALL)
     if fence:
         raw = fence.group(1)
-    # Try direct parse first
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
         pass
-    # Fall back: extract first {...} block from anywhere in the text
     obj = re.search(r"\{.*\}", raw, re.DOTALL)
     if obj:
         try:
@@ -405,234 +699,519 @@ def _parse(raw: str) -> dict:
             pass
     raise json.JSONDecodeError("No valid JSON found in model response", raw, 0)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Validation
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ── Validation (from output_agent.md) ────────────────────────────────────────
 def validate_result(result: dict) -> bool:
-    required = [
-        "module", "anomalies_detected", "findings", "region",
-        "severity", "investigator_action", "confidence",
-        "dataset_source", "disclaimer"
-    ]
-    for k in required:
+    for k in ("module", "severity", "confidence", "disclaimer"):
         if k not in result:
             return False
     if result["severity"] not in VALID_SEVERITIES:
         return False
     if result["confidence"] not in VALID_CONFIDENCES:
         return False
-    if not isinstance(result["findings"], list):
-        return False
     return True
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Report renderer — production card layout
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ── Report card renderer (from output_agent.md) ───────────────────────────────
 def render_report(result: dict):
-    severity = result.get("severity", "Normal")
-    c = SEVERITY_COLORS.get(severity, SEVERITY_COLORS["Normal"])
+    severity   = result.get("severity", "Normal")
+    sev_cls    = SEV_CLASS.get(severity, "sev-normal")
+    sev_icon   = SEV_ICON.get(severity, "●")
+    sev_lbl    = SEV_LABEL.get(severity, severity)
+    dot_cls    = DOT_CLASS.get(severity, "dot-normal")
 
+    # ── Severity banner
     st.markdown(f"""
-    <div style='background:{c["bg"]};color:{c["text"]};padding:8px 18px;
-    border-radius:8px;display:inline-block;font-weight:500;
-    font-size:14px;margin-bottom:16px'>{c["label"]}</div>
+    <div class="nf-severity {sev_cls}">
+        <span style="font-size:22px;line-height:1">{sev_icon}</span>
+        <span>{sev_lbl}</span>
+    </div>
     """, unsafe_allow_html=True)
 
-    st.subheader(f"Forensic Screening Report — {result.get('module','')}")
-    st.caption(f"Dataset grounding: **{result.get('dataset_source','Unknown')}**")
-    st.divider()
+    # ── Report title + dataset
+    module_name = result.get("module", "")
+    dataset_src = result.get("dataset_source", "Unknown")
+    st.markdown(f"""
+    <div style="margin:0 0 4px">
+        <span class="nf-report-title">Forensic Screening Report</span>
+        <span class="nf-report-mod">{module_name}</span>
+    </div>
+    <div class="nf-report-ds">Dataset grounding: <strong>{dataset_src}</strong></div>
+    """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Anomalies",  "Yes" if result.get("anomalies_detected") else "No")
-    col2.metric("Confidence", result.get("confidence", "Unknown"))
-    col3.metric("Region",     result.get("region", "Unknown"))
+    # ── Case summary
+    if result.get("case_summary"):
+        st.markdown(
+            f'<div class="nf-summary">📋 {result["case_summary"]}</div>',
+            unsafe_allow_html=True,
+        )
 
-    st.divider()
-    st.markdown("**Findings**")
-    findings = result.get("findings", [])
-    if findings:
-        for f in findings:
-            st.markdown(f"- {f}")
-    else:
-        st.markdown("- No visual anomalies detected in this sample.")
+    # ── Stat cards (Anomalies · Confidence · Severity)
+    anomaly_val = result.get("anomalies") or ("Yes" if result.get("anomalies_detected") else "No")
+    confidence  = result.get("confidence", "—")
+    st.markdown(f"""
+    <div class="nf-stats">
+        <div class="nf-stat">
+            <div class="stat-label">Anomalies</div>
+            <div class="stat-value">{anomaly_val}</div>
+        </div>
+        <div class="nf-stat">
+            <div class="stat-label">Confidence</div>
+            <div class="stat-value">{confidence}</div>
+        </div>
+        <div class="nf-stat">
+            <div class="stat-label">Severity</div>
+            <div class="stat-value">{severity}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown("**Investigator Action**")
-    st.info(result.get("investigator_action", "No action specified."))
-    st.warning(
-        f"⚠ {result.get('disclaimer','AI screening only. Expert forensic review required.')}"
+    # ── Region (full-width, no truncation)
+    region_val = result.get("suspected_region") or result.get("region", "Unknown")
+    st.markdown(
+        f'<div class="nf-region"><b>Region:</b> {region_val}</div>',
+        unsafe_allow_html=True,
     )
 
+    # ── Key findings card
+    findings = result.get("key_findings") or result.get("findings", [])
+    if not findings:
+        findings = ["No significant findings detected in this sample."]
+    items_html = "".join(
+        f'<div class="nf-finding">'
+        f'<span class="nf-dot {dot_cls}"></span>'
+        f'<span>{f}</span></div>'
+        for f in findings
+    )
+    st.markdown(f"""
+    <div class="nf-card">
+        <div class="nf-card-title">🔍 Key Findings</div>
+        {items_html}
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── UI ────────────────────────────────────────────────────────────────────────
-st.title("NeuroForensic AI")
-st.caption("Multi-Modal Death Investigation Assistant | Healthcare Track | Hackathon Demo")
-st.caption("Decision-support prototype — not for clinical or legal use.")
-st.divider()
+    # ── Interpretation + Forensic Relevance (two-column)
+    interp    = result.get("medical_interpretation", "")
+    relevance = result.get("forensic_relevance", "")
+    if interp or relevance:
+        st.markdown(f"""
+        <div class="nf-two-col">
+            <div class="nf-card">
+                <div class="nf-card-title">🩺 Medical Interpretation</div>
+                <div style="font-size:13.5px;color:#333;line-height:1.6">{interp or "—"}</div>
+            </div>
+            <div class="nf-card">
+                <div class="nf-card-title">🔎 Forensic Relevance</div>
+                <div style="font-size:13.5px;color:#333;line-height:1.6">{relevance or "—"}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-# ── Sidebar — API key entry ───────────────────────────────────────────────────
+    # ── Differentials + Next Steps (collapsible, side by side)
+    differentials = result.get("differential_considerations", [])
+    next_steps    = result.get("recommended_next_steps", [])
+    if differentials or next_steps:
+        col_l, col_r = st.columns(2)
+        with col_l:
+            if differentials:
+                with st.expander("🔀 Differential Considerations"):
+                    for d in differentials:
+                        st.markdown(f"- {d}")
+        with col_r:
+            if next_steps:
+                with st.expander("📋 Recommended Next Steps"):
+                    for s in next_steps:
+                        st.markdown(f"- {s}")
+
+    # ── Investigator action card
+    action = result.get("investigator_action", "")
+    if action:
+        st.markdown(f"""
+        <div class="nf-action">
+            <div class="nf-action-label">🎯 Investigator Action Required</div>
+            <div class="nf-action-text">{action}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── Limitations note
+    limitations = result.get("limitations", "")
+    if limitations:
+        st.caption(f"⚡ Analysis limitations: {limitations}")
+
+    # ── Disclaimer
+    disclaimer = result.get("disclaimer", "AI screening only. Expert forensic review required.")
+    st.markdown(
+        f'<div class="nf-disclaimer">⚠️ <strong>Disclaimer:</strong> {disclaimer}</div>',
+        unsafe_allow_html=True,
+    )
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Session state init
+# ─────────────────────────────────────────────────────────────────────────────
+if "selected_module" not in st.session_state:
+    st.session_state.selected_module = list(MODULE_META.keys())[0]
+if "analysis_history" not in st.session_state:
+    st.session_state.analysis_history = _load_history()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sidebar
+# ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### Configuration")
+    st.markdown("## 🧠 Forensic AI")
+
+    # API status
     key = _get_api_key()
-    if not key:
+    st.markdown('<div class="nf-sidebar-title">API Status</div>', unsafe_allow_html=True)
+    if key:
+        st.markdown(
+            f'<div class="nf-api-badge api-ok">🟢 Key loaded &nbsp;·&nbsp; <code>{key[:8]}…</code></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Verify key", use_container_width=True):
+            with st.spinner("Testing…"):
+                ok, msg = _verify_key(key)
+            st.success("Key valid!") if ok else st.error(f"Rejected: {msg}")
+    else:
+        st.markdown(
+            '<div class="nf-api-badge api-none">🔴 No API key set</div>',
+            unsafe_allow_html=True,
+        )
         entered = st.text_input(
             "Gemini API Key",
             type="password",
-            placeholder="AIza...",
-            help="Free key at aistudio.google.com — no credit card needed",
+            placeholder="AIza…",
+            help="Free key at aistudio.google.com",
         )
         if entered:
             st.session_state["gemini_api_key"] = entered.strip()
             st.rerun()
-        st.info(
-            "Get a free key at **aistudio.google.com**\n\n"
-            "Or add to `.env` file:\n"
-            "```\nGEMINI_API_KEY=AIza...\n```"
-        )
-    else:
-        st.success(f"Key loaded: `{key[:8]}...`")
-        if st.button("Verify key", use_container_width=True):
-            with st.spinner("Testing key…"):
-                ok, msg = _verify_key(key)
-            if ok:
-                st.success("Key is valid!")
-            else:
-                st.error(f"Key rejected: {msg}")
+        st.caption("Get a free key at **aistudio.google.com** — no credit card needed.")
 
-    st.divider()
-    st.markdown("**Gemini free tier limits**")
-    st.caption("15 req/min · 1,500 req/day · No credit card")
-    st.caption(f"App enforces {MIN_CALL_INTERVAL}s between calls.")
-
+    # Rate limit status
+    st.markdown('<div class="nf-sidebar-title">Rate Limit</div>', unsafe_allow_html=True)
     remaining = max(0, int(MIN_CALL_INTERVAL - (time.time() - _rate_state()["last_call"])))
     if remaining > 0:
         st.warning(f"Next call ready in {remaining}s")
     else:
         st.success("Ready to analyze")
+    st.caption(f"Free tier: 15 req/min · 1,500 req/day · App enforces {MIN_CALL_INTERVAL}s gap")
 
+    # Analysis history
+    st.markdown('<div class="nf-sidebar-title">Analysis History</div>', unsafe_allow_html=True)
+    if st.session_state.analysis_history:
+        col_clr, col_cnt = st.columns([2, 1])
+        with col_cnt:
+            st.caption(f"{len(st.session_state.analysis_history)} saved")
+        with col_clr:
+            if st.button("🗑 Clear", use_container_width=True):
+                st.session_state.analysis_history = []
+                _save_history([])
+                st.session_state.pop("history_result", None)
+                st.rerun()
+
+        for i, entry in enumerate(st.session_state.analysis_history):
+            icon    = MODULE_META.get(entry["module"], {}).get("icon", "🔬")
+            sev     = entry.get("severity", "Normal")
+            tag_cls = {"Normal": "tag-normal", "Suspicious": "tag-suspicious",
+                       "Critical": "tag-critical"}.get(sev, "tag-normal")
+            summary = entry.get("case_summary", "")
+            st.markdown(f"""
+            <div class="nf-hist-card">
+                <div class="nf-hist-mod">{icon} {entry['module']}</div>
+                <div class="nf-hist-time">{entry['timestamp']} · {entry['filename']}</div>
+                <div class="nf-hist-tags">
+                    <span class="nf-hist-tag {tag_cls}">{sev}</span>
+                    <span class="nf-hist-tag" style="background:rgba(128,128,128,0.12);color:#555">{entry['confidence']}</span>
+                </div>
+                {f'<div style="font-size:11px;color:#888;margin-top:4px;font-style:italic">{summary[:70]}…</div>' if summary else ""}
+            </div>
+            """, unsafe_allow_html=True)
+            if entry.get("result"):
+                if st.button("📂 Load case", key=f"load_{i}", use_container_width=True):
+                    st.session_state["history_result"] = entry["result"]
+                    st.session_state.selected_module   = entry["module"]
+                    for k in ("last_result", "last_cache_key", "annotated_image"):
+                        st.session_state.pop(k, None)
+                    st.rerun()
+    else:
+        st.caption("No analyses yet — results persist across refreshes.")
+
+# ─────────────────────────────────────────────────────────────────────────────
 # API key hard stop
+# ─────────────────────────────────────────────────────────────────────────────
 if not _get_api_key():
-    st.warning("Enter your Gemini API key in the sidebar to continue.")
+    st.markdown("""
+    <div class="nf-hero">
+        <div class="nf-hero-title">🧠 Forensic AI</div>
+        <div class="nf-hero-sub">Enter your Gemini API key in the sidebar to begin.</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.info("👈 Add your free Gemini API key in the sidebar to start forensic screening.")
     st.stop()
 
-# ── Module selector ───────────────────────────────────────────────────────────
-st.subheader("Step 1 — Select forensic module")
+# ─────────────────────────────────────────────────────────────────────────────
+# Hero header
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="nf-hero">
+    <div class="nf-hero-title">🧠 Forensic AI</div>
+    <div class="nf-hero-sub">Multi-Modal Death Investigation Assistant · Healthcare Track · Hackathon Demo</div>
+    <div class="nf-hero-chips">
+        <span class="nf-chip">6 Forensic Modules</span>
+        <span class="nf-chip">Gemini Flash Vision</span>
+        <span class="nf-chip">INTERPOL DVI Protocol</span>
+        <span class="nf-chip">Demo Only — Not Clinical</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Step 1 — Module selector
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="nf-step">
+    <div class="nf-step-num">1</div>
+    <div class="nf-step-label">Select forensic module</div>
+</div>
+""", unsafe_allow_html=True)
 
 module_names = list(MODULE_META.keys())
-if "selected_module" not in st.session_state:
-    st.session_state.selected_module = module_names[0]
-
 cols = st.columns(3)
 for i, name in enumerate(module_names):
     meta = MODULE_META[name]
     if cols[i % 3].button(
         f"{meta['icon']} {name}",
         use_container_width=True,
-        type="primary" if st.session_state.selected_module == name else "secondary"
+        type="primary" if st.session_state.selected_module == name else "secondary",
     ):
-        st.session_state.selected_module = name
+        if st.session_state.selected_module != name:
+            st.session_state.selected_module = name
+            for k in ("last_result", "last_cache_key", "annotated_image"):
+                st.session_state.pop(k, None)
 
 selected_module = st.session_state.selected_module
 meta = MODULE_META[selected_module]
 
-st.info(
-    f"**{meta['icon']} {selected_module}** — {meta['description']}\n\n"
-    f"Dataset: *{meta['dataset']}*"
-)
-st.divider()
+st.markdown(f"""
+<div class="nf-module-card">
+    <div class="nf-module-icon">{meta['icon']}</div>
+    <div>
+        <div class="nf-module-name">{selected_module}</div>
+        <div class="nf-module-desc">{meta['description']}</div>
+        <div class="nf-module-ds">Dataset: {meta['dataset']}</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# ── Input section ─────────────────────────────────────────────────────────────
-st.subheader("Step 2 — Provide evidence")
+# ─────────────────────────────────────────────────────────────────────────────
+# Step 2 — Input
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="nf-step">
+    <div class="nf-step-num">2</div>
+    <div class="nf-step-label">Provide evidence</div>
+</div>
+""", unsafe_allow_html=True)
 
-input_bytes  = None
-input_text   = None
-media_type   = "image/jpeg"
-input_ready  = False
+input_bytes     = None
+input_text      = None
+input_ready     = False
+selected_sample = "none"
 
 if meta["input_type"] == "image":
-    sample_options = {k: v for k, v in meta["samples"].items() if v is not None}
-    sample_options = {"Upload my own image": None, **sample_options}
-    selected_sample = st.selectbox("Choose a demo sample or upload:", list(sample_options.keys()))
+    sample_options = {"Upload my own image": None}
+    sample_options.update(meta["samples"])
+
+    selected_sample = st.selectbox(
+        "Choose a demo sample or upload your own:",
+        list(sample_options.keys()),
+        key=f"sample_sel_{selected_module}",
+    )
 
     if selected_sample == "Upload my own image":
         uploaded = st.file_uploader(
-            "Upload scan or scene photo (JPEG or PNG)",
-            type=["jpg", "jpeg", "png"]
+            f"Upload scan / scene photo (JPEG or PNG) — will be analyzed as **{selected_module}**",
+            type=["jpg", "jpeg", "png"],
+            key=f"uploader_{selected_module}",
         )
         if uploaded:
-            input_bytes = uploaded.read()
-            media_type  = "image/png" if uploaded.name.endswith(".png") else "image/jpeg"
-            st.image(input_bytes, caption="Uploaded image", use_container_width=True)
+            input_bytes     = uploaded.read()
+            selected_sample = uploaded.name
+            st.markdown('<div class="nf-img-panel"><span class="nf-img-label">Uploaded Image</span></div>', unsafe_allow_html=True)
+            st.image(input_bytes, use_container_width=True)
             input_ready = True
     else:
         path = Path(sample_options[selected_sample])
         if path.exists():
             input_bytes = path.read_bytes()
-            st.image(input_bytes, caption=selected_sample, use_container_width=True)
+            st.markdown(f'<div class="nf-img-panel"><span class="nf-img-label">{selected_sample}</span></div>', unsafe_allow_html=True)
+            st.image(input_bytes, use_container_width=True)
             input_ready = True
         else:
             st.warning(
                 f"Sample not found: `{path}`\n\n"
-                "Run `python download_samples.py` to download demo images, "
-                "or upload your own above."
+                "Run `python download_samples.py` or choose **Upload my own image**."
             )
 
 else:  # Toxicology text
-    sample_options = {k: v for k, v in meta["samples"].items()}
-    selected_sample = st.selectbox("Choose a demo report or paste your own:", list(sample_options.keys()))
+    all_text_opts = {"Paste your own report": None}
+    all_text_opts.update(meta["samples"])
 
-    if selected_sample and Path(meta["samples"].get(selected_sample, "")).exists():
-        input_text = Path(meta["samples"][selected_sample]).read_text()
-        st.code(input_text, language="text")
-        input_ready = True
-    else:
+    selected_sample = st.selectbox(
+        "Choose a demo report or paste your own:",
+        list(all_text_opts.keys()),
+        key=f"sample_sel_{selected_module}",
+    )
+
+    if selected_sample != "Paste your own report":
+        path = Path(all_text_opts[selected_sample])
+        if path.exists():
+            input_text = path.read_text()
+            preview = input_text[:2000] + ("…" if len(input_text) > 2000 else "")
+            st.code(preview, language="text")
+            input_ready = True
+        else:
+            st.warning(
+                f"Sample not found: `{path}`\n\n"
+                "Run `python download_samples.py` to create demo text files."
+            )
+
+    if not input_ready:
         input_text = st.text_area(
             "Paste toxicology report text:",
-            height=220,
-            placeholder="e.g.\nEthanol: 0.32 g/dL [Reference < 0.08] ** ELEVATED **\nAcetaminophen: 240 mcg/mL [Reference < 20] ** CRITICAL **"
+            height=200,
+            placeholder=(
+                "Ethanol: 0.32 g/dL  [Reference < 0.08]  ** ELEVATED **\n"
+                "Acetaminophen: 240 mcg/mL  [Reference < 20]  ** CRITICAL **"
+            ),
+            key=f"paste_{selected_module}",
         )
         if input_text and input_text.strip():
+            selected_sample = "Pasted report"
             input_ready = True
 
-# ── Run analysis ──────────────────────────────────────────────────────────────
-st.divider()
-st.subheader("Step 3 — Run forensic screening")
+# ─────────────────────────────────────────────────────────────────────────────
+# Cache key
+# ─────────────────────────────────────────────────────────────────────────────
+if input_bytes is not None:
+    _content_hash = hash(input_bytes) & 0xFFFFFFFF
+elif input_text is not None:
+    _content_hash = hash(input_text) & 0xFFFFFFFF
+else:
+    _content_hash = 0
 
-# Build a cache key from the current input so changing input invalidates the cache
-_cache_key = f"{selected_module}::{selected_sample if 'selected_sample' in dir() else ''}::{hash(input_bytes or b'') if input_bytes else hash(input_text or '')}"
+_cache_key = f"{selected_module}|{selected_sample}|{_content_hash}"
 
-if st.button("Analyze Now", type="primary", disabled=not input_ready):
+# ─────────────────────────────────────────────────────────────────────────────
+# Step 3 — Run analysis
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="nf-step">
+    <div class="nf-step-num">3</div>
+    <div class="nf-step-label">Run forensic screening</div>
+</div>
+""", unsafe_allow_html=True)
+
+if st.button("🔬 Analyze Now", type="primary", disabled=not input_ready, use_container_width=True):
+    st.session_state.pop("history_result", None)
     if st.session_state.get("last_cache_key") != _cache_key:
-        with st.spinner(f"Running {selected_module} analysis..."):
+        with st.spinner(f"Running {selected_module} analysis…"):
             try:
                 if meta["input_type"] == "image":
-                    result = run_image_agent(input_bytes, media_type, selected_module)
+                    result = run_image_agent(input_bytes, selected_module)
                 else:
                     result = run_text_agent(input_text, selected_module)
-                st.session_state["last_result"] = result
+
+                st.session_state["last_result"]    = result
                 st.session_state["last_cache_key"] = _cache_key
+
+                if meta["input_type"] == "image" and input_bytes:
+                    try:
+                        ann = annotate_image(input_bytes, result, selected_module)
+                        st.session_state["annotated_image"] = ann
+                    except Exception:
+                        st.session_state.pop("annotated_image", None)
+
+                history_entry = {
+                    "timestamp":    datetime.now().strftime("%H:%M:%S"),
+                    "module":       selected_module,
+                    "filename":     selected_sample,
+                    "anomalies":    result.get("anomalies") or ("Yes" if result.get("anomalies_detected") else "No"),
+                    "confidence":   result.get("confidence", "Unknown"),
+                    "severity":     result.get("severity", "Normal"),
+                    "suspected_region": result.get("suspected_region") or result.get("region", "Unknown"),
+                    "case_summary": result.get("case_summary", ""),
+                    "result":       result,
+                }
+                st.session_state.analysis_history.insert(0, history_entry)
+                if len(st.session_state.analysis_history) > 20:
+                    st.session_state.analysis_history = st.session_state.analysis_history[:20]
+                _save_history(st.session_state.analysis_history)
+
             except json.JSONDecodeError as e:
-                st.error(f"Gemini returned non-JSON: {e.doc[:300]}")
+                st.error(f"Model returned non-JSON: {e.doc[:300]}")
+                st.session_state["last_result"]    = _make_fallback(selected_module)
+                st.session_state["last_cache_key"] = _cache_key
             except Exception as e:
                 err = str(e)
-                if "api_key" in err.lower() or "permission" in err.lower() or "403" in err:
-                    st.error("Invalid Gemini API key. Check your key at aistudio.google.com.")
+                if "api_key" in err.lower() or "403" in err:
+                    st.error("Invalid API key. Check at aistudio.google.com.")
                 elif "429" in err or "quota" in err.lower() or "rate" in err.lower():
-                    st.error("Rate limit exceeded after retry. Wait 60s then click Analyze Again. If it keeps failing, you may have hit the 1500 req/day cap — resets at midnight UTC.")
+                    st.error("Rate limit exceeded. Wait 60s then retry. Daily cap resets at midnight UTC.")
                 else:
-                    st.error(err)
+                    st.error(f"Analysis failed: {err}")
+                st.session_state["last_result"]    = _make_fallback(selected_module)
+                st.session_state["last_cache_key"] = _cache_key
 
-if st.session_state.get("last_result") and st.session_state.get("last_cache_key") == _cache_key:
-    result = st.session_state["last_result"]
+# ─────────────────────────────────────────────────────────────────────────────
+# Results
+# ─────────────────────────────────────────────────────────────────────────────
+_from_history = bool(st.session_state.get("history_result"))
+_fresh        = (st.session_state.get("last_result")
+                 and st.session_state.get("last_cache_key") == _cache_key)
+
+if _from_history or _fresh:
+    result  = st.session_state["history_result"] if _from_history else st.session_state["last_result"]
+    ann_img = None if _from_history else st.session_state.get("annotated_image")
+
+    if _from_history:
+        st.info("📂 Loaded from history — re-run analysis to generate new annotations.")
+
+    # Image comparison panel
+    if ann_img and meta["input_type"] == "image" and input_bytes:
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_orig, col_ann = st.columns(2)
+        with col_orig:
+            st.markdown('<div class="nf-img-panel"><span class="nf-img-label">Original</span></div>', unsafe_allow_html=True)
+            st.image(input_bytes, use_container_width=True)
+        with col_ann:
+            st.markdown('<div class="nf-img-panel"><span class="nf-img-label">AI Markers</span></div>', unsafe_allow_html=True)
+            st.image(ann_img, use_container_width=True)
+        st.markdown(
+            '<div class="nf-img-caption" style="text-align:center">⚠ Annotations are AI-estimated approximations for demo triage only.</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     if validate_result(result):
         render_report(result)
     else:
-        st.error("Report generation failed: unexpected format. Please retry.")
+        st.error("Unexpected report format. Raw output:")
+        st.json(result)
 
-# ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.caption(
-    "For demonstration purposes only. "
-    "NeuroForensic AI does not replace qualified forensic pathologists. "
-    "All outputs require expert validation before any action. "
-    "No real patient data is used or stored. | "
-    "Datasets: NIH ChestX-ray14, BraTS 2023, RSNA, MIMIC-IV, EEG-ImageNet, INTERPOL DVI."
-)
+# ─────────────────────────────────────────────────────────────────────────────
+# Footer
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="nf-footer">
+    <strong>Forensic AI</strong> — For demonstration purposes only.<br>
+    Does not replace qualified forensic pathologists. All outputs require expert validation.<br>
+    No real patient data used or stored.<br>
+    <span style="color:#AAB">Datasets: NIH ChestX-ray14 · BraTS 2023 · RSNA · MIMIC-IV · INTERPOL DVI</span>
+</div>
+""", unsafe_allow_html=True)

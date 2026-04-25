@@ -1,27 +1,60 @@
-TOXICOLOGY LABORATORY REPORT
-Patient ID: DEMO-002 | Specimen: Femoral Blood | Collection: Post-mortem
+SYNTHETIC DEMO TOXICOLOGY REPORT — NOT REAL PATIENT DATA
+Case ID: DEMO-TOX-002
+Specimen Type: Postmortem Blood, Central (femoral) + Peripheral (subclavian)
+Collection Date/Time: See case file
 
-SUBSTANCE SCREEN — IMMUNOASSAY
--------------------------------
-Ethanol (EtOH)          : 0.29 g/dL    [Reference < 0.08]  ** ELEVATED **
-Acetaminophen           : 215 mcg/mL   [Reference < 20]    ** CRITICAL **
-Benzodiazepines (screen): POSITIVE     [Reference: ND]     ** DETECTED **
-  Diazepam (confirm)    : 890 ng/mL    [Reference < 200]   ** ELEVATED **
-  Nordiazepam           : 1240 ng/mL   [Reference < 300]   ** ELEVATED **
-Opiates (morphine eq.)  : POSITIVE     [Reference: ND]     ** DETECTED **
-  Morphine (confirm)    : 340 ng/mL    [Reference < 100]   ** ELEVATED **
-Cocaine Metabolites     : Not Detected [Reference: ND]     NORMAL
-Amphetamines            : Not Detected [Reference: ND]     NORMAL
-Cannabis (THC-COOH)     : 62 ng/mL     [Reference: ND]     ** DETECTED **
+============================================================
+TOXICOLOGY PANEL RESULTS
+============================================================
 
-METALS / VOLATILES
-------------------
-Carbon Monoxide (HbCO)  : 18%          [Reference < 5%]    ** ELEVATED **
-Cyanide                 : 3.2 mcg/mL   [Reference < 1.0]   ** ELEVATED **
+VOLATILE COMPOUNDS
+  Ethanol:              0.21 g/dL    [Reference < 0.08 g/dL]    ** ELEVATED **
 
-INTERPRETATION: Multiple substances detected above reference thresholds.
-Poly-substance profile with CNS depressants. Elevated HbCO warrants
-environmental source investigation. Recommend full confirmatory panel.
+DRUGS OF ABUSE SCREEN / CONFIRMATORY
+  Opioids (Screen):     POSITIVE
+    → Morphine (GC-MS): 180 ng/mL   [Reference < 20 ng/mL]     ** ELEVATED **
+    → Codeine:          Not detected
+    → Heroin Metabolite:Not detected
+  Benzodiazepines:      POSITIVE
+    → Diazepam (GC-MS): 420 ng/mL   [Reference < 200 ng/mL]    ** ELEVATED **
+    → Nordazepam:       110 ng/mL    [Reference < 100 ng/mL]    BORDERLINE
+  Cocaine Metabolite:   Not detected [Reference: Not detected]  WITHIN NORMAL LIMITS
+  Amphetamines:         Negative     [Reference: Negative]      WITHIN NORMAL LIMITS
+  Cannabinoids (THC):   Negative     [Reference: Negative]      WITHIN NORMAL LIMITS
 
-Dataset reference: MIMIC-IV Clinical Notes (PhysioNet)
-This is a demonstration sample — not real patient data.
+THERAPEUTIC DRUGS
+  Acetaminophen:        14.5 mcg/mL  [Reference < 20 mcg/mL]   WITHIN NORMAL LIMITS
+  Salicylate:           8.1 mg/dL    [Reference < 30 mg/dL]    WITHIN NORMAL LIMITS
+
+CARBON MONOXIDE / GAS
+  Carboxyhemoglobin:    3.1%         [Reference < 5%]           WITHIN NORMAL LIMITS
+
+============================================================
+INTERPRETATION
+============================================================
+
+Multiple substance interaction detected. Combined CNS depressant effect
+from concurrent alcohol + opioid (morphine) + benzodiazepine (diazepam)
+exposure identified.
+
+Poly-substance synergism presents elevated risk profile. The combination
+of alcohol with opioids and benzodiazepines carries significant potential
+for respiratory depression, even at individually sub-lethal concentrations.
+
+Confirmatory GC-MS testing performed. Expert forensic toxicologist review
+and correlation with autopsy findings is strongly recommended.
+
+Causation of death requires expert determination — this report provides
+screening data only.
+
+============================================================
+REPORT NOTES
+============================================================
+
+This is SYNTHETIC demo data generated for AI screening demonstration.
+No real patient information is contained in this report.
+Reference format based on MIMIC-IV forensic toxicology documentation style.
+Not for clinical, legal, or diagnostic use.
+
+Analyst: DEMO SYSTEM
+Laboratory: DEMO FORENSIC TOXICOLOGY LABORATORY

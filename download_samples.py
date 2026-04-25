@@ -156,6 +156,140 @@ def download_brain_mri():
         os.unlink(tmp)
 
 
+TOX_SAMPLES = {
+    "samples/tox_normal.txt": """\
+SYNTHETIC DEMO TOXICOLOGY REPORT — NOT REAL PATIENT DATA
+Case ID: DEMO-TOX-001
+Specimen Type: Postmortem Blood, Central (femoral)
+
+============================================================
+TOXICOLOGY PANEL RESULTS
+============================================================
+
+VOLATILE COMPOUNDS
+  Ethanol:              < 0.01 g/dL   [Reference < 0.08 g/dL]   WITHIN NORMAL LIMITS
+
+DRUGS OF ABUSE SCREEN
+  Opioids (Screen):     Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
+  Benzodiazepines:      Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
+  Cocaine Metabolite:   Not detected   [Reference: Not detected]  WITHIN NORMAL LIMITS
+  Amphetamines:         Negative       [Reference: Negative]      WITHIN NORMAL LIMITS
+
+THERAPEUTIC DRUGS
+  Acetaminophen:        7.4 mcg/mL    [Reference < 20 mcg/mL]   WITHIN NORMAL LIMITS
+  Salicylate:           < 2.0 mg/dL   [Reference < 30 mg/dL]    WITHIN NORMAL LIMITS
+
+CARBON MONOXIDE
+  Carboxyhemoglobin:    1.1%          [Reference < 5%]           WITHIN NORMAL LIMITS
+
+============================================================
+INTERPRETATION
+============================================================
+
+No toxic substances detected above established reference thresholds.
+No evidence of drug intoxication or toxic exposure at time of death.
+
+Analyst: DEMO SYSTEM | Lab: DEMO FORENSIC TOXICOLOGY LABORATORY
+This is SYNTHETIC demo data for AI screening demonstration only.
+""",
+
+    "samples/tox_suspicious.txt": """\
+SYNTHETIC DEMO TOXICOLOGY REPORT — NOT REAL PATIENT DATA
+Case ID: DEMO-TOX-002
+Specimen Type: Postmortem Blood, Central + Peripheral
+
+============================================================
+TOXICOLOGY PANEL RESULTS
+============================================================
+
+VOLATILE COMPOUNDS
+  Ethanol:              0.21 g/dL    [Reference < 0.08 g/dL]    ** ELEVATED **
+
+DRUGS OF ABUSE SCREEN / CONFIRMATORY
+  Opioids (Screen):     POSITIVE
+    Morphine (GC-MS):   180 ng/mL   [Reference < 20 ng/mL]      ** ELEVATED **
+  Benzodiazepines:      POSITIVE
+    Diazepam (GC-MS):   420 ng/mL   [Reference < 200 ng/mL]     ** ELEVATED **
+  Cocaine Metabolite:   Not detected                             WITHIN NORMAL LIMITS
+  Amphetamines:         Negative                                 WITHIN NORMAL LIMITS
+
+THERAPEUTIC DRUGS
+  Acetaminophen:        14.5 mcg/mL  [Reference < 20 mcg/mL]   WITHIN NORMAL LIMITS
+  Salicylate:           8.1 mg/dL    [Reference < 30 mg/dL]    WITHIN NORMAL LIMITS
+
+CARBON MONOXIDE
+  Carboxyhemoglobin:    3.1%         [Reference < 5%]           WITHIN NORMAL LIMITS
+
+============================================================
+INTERPRETATION
+============================================================
+
+Multiple substance interaction detected. Combined CNS depressant effect
+from concurrent alcohol + opioids (morphine) + benzodiazepine (diazepam).
+Confirmatory GC-MS performed. Expert forensic review strongly recommended.
+
+Analyst: DEMO SYSTEM | Lab: DEMO FORENSIC TOXICOLOGY LABORATORY
+This is SYNTHETIC demo data for AI screening demonstration only.
+""",
+
+    "samples/tox_critical.txt": """\
+SYNTHETIC DEMO TOXICOLOGY REPORT — NOT REAL PATIENT DATA
+Case ID: DEMO-TOX-003
+Specimen Type: Postmortem Blood (Central + Peripheral) + Vitreous Humor + Urine
+
+============================================================
+TOXICOLOGY PANEL RESULTS — CRITICAL FLAGS PRESENT
+============================================================
+
+VOLATILE COMPOUNDS
+  Ethanol:              0.38 g/dL    [Reference < 0.08 g/dL]    ** CRITICAL — UPPER LETHAL RANGE **
+
+DRUGS OF ABUSE SCREEN / CONFIRMATORY
+  Opioids:              POSITIVE
+    Fentanyl (LC-MS):   24 ng/mL    [Reference < 2 ng/mL]      ** CRITICAL — LETHAL RANGE **
+    Norfentanyl:        9 ng/mL     [Active metabolite]
+  Benzodiazepines:      POSITIVE
+    Alprazolam:         680 ng/mL   [Reference < 200 ng/mL]    ** CRITICAL **
+  Cocaine Metabolite:   POSITIVE
+    Benzoylecgonine:    380 ng/mL   [Reference: Not detected]  ** DETECTED **
+    Cocaethylene:       95 ng/mL    [EtOH + cocaine adduct]    ** DETECTED **
+
+THERAPEUTIC DRUGS
+  Acetaminophen:        310 mcg/mL  [Reference < 20 mcg/mL]   ** CRITICAL — HEPATOTOXIC RANGE **
+  Salicylate:           52 mg/dL    [Reference < 30 mg/dL]    ** ELEVATED **
+
+CARBON MONOXIDE
+  Carboxyhemoglobin:    24%         [Reference < 5%]           ** ELEVATED — SIGNIFICANT CO EXPOSURE **
+
+============================================================
+INTERPRETATION
+============================================================
+
+MULTIPLE CRITICAL TOXIC FINDINGS. Poly-substance toxidrome detected.
+Concurrent fentanyl + alprazolam + ethanol represents compounded respiratory
+depression risk. Acetaminophen at hepatotoxic range. COHb at 24% indicates
+significant carbon monoxide exposure requiring scene correlation.
+
+IMMEDIATE expert forensic toxicologist review required.
+Causation of death cannot be determined from this report alone.
+
+Analyst: DEMO SYSTEM | Lab: DEMO FORENSIC TOXICOLOGY LABORATORY
+This is SYNTHETIC demo data for AI screening demonstration only.
+""",
+}
+
+
+def create_tox_samples():
+    """Create synthetic demo toxicology text samples if missing."""
+    for path, content in TOX_SAMPLES.items():
+        p = Path(path)
+        if p.exists():
+            print(f"  Already exists: {path}")
+        else:
+            p.write_text(content)
+            print(f"  Created: {path}  (synthetic demo data)")
+
+
 def main():
     print("NeuroForensic AI — Downloading REAL medical demo samples")
     print("=" * 60)
@@ -163,6 +297,7 @@ def main():
     print("  Chest X-ray  → ieee8023/covid-chestxray-dataset  (CC BY 4.0)")
     print("  Brain MRI    → nipy/nibabel fMRI test data       (MIT)")
     print("  Body CT      → ieee8023/covid-chestxray-dataset  (CC BY 4.0)")
+    print("  Toxicology   → Synthetic demo text (generated locally)")
     print()
 
     failed = []
@@ -179,11 +314,8 @@ def main():
         failed += ["samples/brain_normal.jpg", "samples/brain_suspicious.jpg"]
 
     print()
-    for f in ["samples/tox_normal.txt", "samples/tox_suspicious.txt"]:
-        if Path(f).exists():
-            print(f"  Text sample ready: {f}")
-        else:
-            print(f"  Missing: {f}  (run git pull — should be in repo)")
+    print("Creating toxicology text samples…")
+    create_tox_samples()
 
     print()
     if failed:
