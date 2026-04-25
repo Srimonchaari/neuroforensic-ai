@@ -284,12 +284,18 @@ MODULE_META = {
 }
 
 # ── Gemini Agents ─────────────────────────────────────────────────────────────
-MIN_CALL_INTERVAL = 5  # seconds — safe under 15 RPM (Gemini free tier)
+MIN_CALL_INTERVAL = 6  # seconds — enforces ~10 RPM, well under free-tier 15 RPM
+
+
+@st.cache_resource
+def _rate_state() -> dict:
+    # Survives page reloads within the same server process
+    return {"last_call": 0.0}
 
 
 def _rate_limit_wait():
-    last = st.session_state.get("last_api_call_time", 0)
-    wait = MIN_CALL_INTERVAL - (time.time() - last)
+    state = _rate_state()
+    wait = MIN_CALL_INTERVAL - (time.time() - state["last_call"])
     if wait <= 0:
         return
     steps = int(wait * 10)
@@ -300,25 +306,40 @@ def _rate_limit_wait():
     bar.empty()
 
 
-def _gemini_post(payload: dict) -> str:
-    _rate_limit_wait()
-    st.session_state["last_api_call_time"] = time.time()
-    r = http.post(
+def _do_post(payload: dict) -> http.Response:
+    return http.post(
         GEMINI_URL,
         params={"key": _get_api_key()},
         json=payload,
         timeout=30,
     )
+
+
+def _gemini_post(payload: dict) -> str:
+    _rate_limit_wait()
+    _rate_state()["last_call"] = time.time()
+
+    r = _do_post(payload)
+
     if r.status_code == 429:
-        st.warning("Rate limit hit — waiting 30s then retrying once…")
-        time.sleep(30)
-        st.session_state["last_api_call_time"] = time.time()
-        r = http.post(GEMINI_URL, params={"key": _get_api_key()}, json=payload, timeout=30)
+        # Retry after a full 65-second window
+        for remaining in range(65, 0, -1):
+            time.sleep(1)
+            if remaining % 10 == 0:
+                st.toast(f"Rate limit — retrying in {remaining}s…")
+        _rate_state()["last_call"] = time.time()
+        r = _do_post(payload)
+
     if not r.ok:
-        raise RuntimeError(f"Gemini API error {r.status_code}: {r.text[:300]}")
+        try:
+            msg = r.json()["error"]["message"]
+        except Exception:
+            msg = r.text[:200]
+        raise RuntimeError(f"{r.status_code}: {msg}")
+
     candidates = r.json().get("candidates", [])
     if not candidates:
-        raise RuntimeError("Gemini returned no candidates.")
+        raise RuntimeError("Gemini returned no candidates — try again.")
     return candidates[0]["content"]["parts"][0]["text"]
 
 
@@ -477,13 +498,11 @@ with st.sidebar:
     st.caption("15 req/min · 1,500 req/day · No credit card")
     st.caption(f"App enforces {MIN_CALL_INTERVAL}s between calls.")
 
-    last_call = st.session_state.get("last_api_call_time", 0)
-    if last_call:
-        remaining = max(0, int(MIN_CALL_INTERVAL - (time.time() - last_call)))
-        if remaining > 0:
-            st.warning(f"Next call ready in {remaining}s")
-        else:
-            st.success("Ready to analyze")
+    remaining = max(0, int(MIN_CALL_INTERVAL - (time.time() - _rate_state()["last_call"])))
+    if remaining > 0:
+        st.warning(f"Next call ready in {remaining}s")
+    else:
+        st.success("Ready to analyze")
 
 # API key hard stop
 if not _get_api_key():
@@ -593,7 +612,7 @@ if st.button("Analyze Now", type="primary", disabled=not input_ready):
                 if "api_key" in err.lower() or "permission" in err.lower() or "403" in err:
                     st.error("Invalid Gemini API key. Check your key at aistudio.google.com.")
                 elif "429" in err or "quota" in err.lower() or "rate" in err.lower():
-                    st.error("Rate limit exceeded. Free tier: 15 req/min, 1500 req/day. Try again in 60s.")
+                    st.error("Rate limit exceeded after retry. Wait 60s then click Analyze Again. If it keeps failing, you may have hit the 1500 req/day cap — resets at midnight UTC.")
                 else:
                     st.error(err)
 
