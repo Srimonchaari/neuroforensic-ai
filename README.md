@@ -1,5 +1,4 @@
-# NeuroForensic AI
-### Pre-Autopsy Intelligence System
+# Pre-Autopsy Intelligence System
 
 ---
 
