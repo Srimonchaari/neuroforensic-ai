@@ -78,7 +78,7 @@ st.set_page_config(
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MAX_OUTPUT_TOKENS = 500
+MAX_OUTPUT_TOKENS = 1024
 VALID_SEVERITIES  = ["Normal", "Suspicious", "Critical"]
 VALID_CONFIDENCES = ["Low", "Medium", "High"]
 
