@@ -27,6 +27,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def _get_api_key() -> str | None:
+    """Read API key from Streamlit secrets (Cloud) or environment variable (local)."""
+    try:
+        return st.secrets["OPENAI_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        return os.getenv("OPENAI_API_KEY")
+
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="NeuroForensic AI",
@@ -250,7 +257,7 @@ MODULE_META = {
 # ── OpenAI Agents ─────────────────────────────────────────────────────────────
 def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
     """Sends image to GPT-4o vision with forensic system prompt."""
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = openai.OpenAI(api_key=_get_api_key())
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
 
     response = client.chat.completions.create(
@@ -281,7 +288,7 @@ def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
 
 def run_text_agent(report_text: str, module: str) -> dict:
     """Sends text to GPT-4o with toxicology system prompt."""
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = openai.OpenAI(api_key=_get_api_key())
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -371,9 +378,13 @@ st.caption("Decision-support prototype — not for clinical or legal use.")
 st.divider()
 
 # API key check
-if not os.getenv("OPENAI_API_KEY"):
-    st.error("OPENAI_API_KEY not found. Add it to your .env file.")
-    st.code("OPENAI_API_KEY=sk-your-key-here", language="bash")
+if not _get_api_key():
+    st.error("OPENAI_API_KEY not found.")
+    st.markdown(
+        "**Local:** add it to a `.env` file:  \n"
+        "`OPENAI_API_KEY=sk-your-key-here`\n\n"
+        "**Streamlit Cloud:** add it under *App settings → Secrets*."
+    )
     st.stop()
 
 # ── Module selector ───────────────────────────────────────────────────────────
