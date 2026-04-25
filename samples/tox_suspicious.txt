@@ -1,0 +1,27 @@
+TOXICOLOGY LABORATORY REPORT
+Patient ID: DEMO-002 | Specimen: Femoral Blood | Collection: Post-mortem
+
+SUBSTANCE SCREEN — IMMUNOASSAY
+-------------------------------
+Ethanol (EtOH)          : 0.29 g/dL    [Reference < 0.08]  ** ELEVATED **
+Acetaminophen           : 215 mcg/mL   [Reference < 20]    ** CRITICAL **
+Benzodiazepines (screen): POSITIVE     [Reference: ND]     ** DETECTED **
+  Diazepam (confirm)    : 890 ng/mL    [Reference < 200]   ** ELEVATED **
+  Nordiazepam           : 1240 ng/mL   [Reference < 300]   ** ELEVATED **
+Opiates (morphine eq.)  : POSITIVE     [Reference: ND]     ** DETECTED **
+  Morphine (confirm)    : 340 ng/mL    [Reference < 100]   ** ELEVATED **
+Cocaine Metabolites     : Not Detected [Reference: ND]     NORMAL
+Amphetamines            : Not Detected [Reference: ND]     NORMAL
+Cannabis (THC-COOH)     : 62 ng/mL     [Reference: ND]     ** DETECTED **
+
+METALS / VOLATILES
+------------------
+Carbon Monoxide (HbCO)  : 18%          [Reference < 5%]    ** ELEVATED **
+Cyanide                 : 3.2 mcg/mL   [Reference < 1.0]   ** ELEVATED **
+
+INTERPRETATION: Multiple substances detected above reference thresholds.
+Poly-substance profile with CNS depressants. Elevated HbCO warrants
+environmental source investigation. Recommend full confirmatory panel.
+
+Dataset reference: MIMIC-IV Clinical Notes (PhysioNet)
+This is a demonstration sample — not real patient data.

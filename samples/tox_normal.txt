@@ -1,0 +1,26 @@
+TOXICOLOGY LABORATORY REPORT
+Patient ID: DEMO-001 | Specimen: Femoral Blood | Collection: Post-mortem
+
+SUBSTANCE SCREEN — IMMUNOASSAY
+-------------------------------
+Ethanol (EtOH)          : 0.01 g/dL    [Reference < 0.08]  NORMAL
+Acetaminophen           : 8 mcg/mL     [Reference < 20]    NORMAL
+Salicylate              : < 5 mg/dL    [Reference < 30]    NORMAL
+Benzodiazepines         : Not Detected [Reference: ND]     NORMAL
+Opiates (morphine eq.)  : Not Detected [Reference: ND]     NORMAL
+Cocaine Metabolites     : Not Detected [Reference: ND]     NORMAL
+Amphetamines            : Not Detected [Reference: ND]     NORMAL
+Cannabis (THC-COOH)     : Not Detected [Reference: ND]     NORMAL
+Tricyclic Antidepressants: Not Detected [Reference: ND]    NORMAL
+
+METALS / VOLATILES
+------------------
+Carbon Monoxide (HbCO)  : 2%           [Reference < 5%]    NORMAL
+Cyanide                 : < 0.5 mcg/mL [Reference < 1.0]   NORMAL
+Lead (Pb)               : 4 mcg/dL     [Reference < 10]    NORMAL
+
+INTERPRETATION: No substances detected above reference thresholds.
+Findings consistent with unimpaired toxicological profile.
+
+Dataset reference: MIMIC-IV Clinical Notes (PhysioNet)
+This is a demonstration sample — not real patient data.

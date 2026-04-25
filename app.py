@@ -28,11 +28,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def _get_api_key() -> str | None:
-    """Read API key from Streamlit secrets (Cloud) or environment variable (local)."""
+    """Read API key: Streamlit secrets → env var → sidebar input."""
     try:
-        return st.secrets["OPENAI_API_KEY"]
-    except (KeyError, FileNotFoundError):
-        return os.getenv("OPENAI_API_KEY")
+        key = st.secrets.get("OPENAI_API_KEY", "")
+        if key:
+            return key
+    except (AttributeError, FileNotFoundError):
+        pass
+    env_key = os.getenv("OPENAI_API_KEY", "")
+    if env_key:
+        return env_key
+    return st.session_state.get("openai_api_key", "") or None
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -377,14 +383,32 @@ st.caption("Multi-Modal Death Investigation Assistant | Healthcare Track | Hacka
 st.caption("Decision-support prototype — not for clinical or legal use.")
 st.divider()
 
-# API key check
+# ── Sidebar — API key entry ───────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### Configuration")
+    if not _get_api_key():
+        entered = st.text_input(
+            "OpenAI API Key",
+            type="password",
+            placeholder="sk-...",
+            help="Get your key at platform.openai.com/api-keys",
+        )
+        if entered:
+            st.session_state["openai_api_key"] = entered
+            st.success("Key saved for this session.")
+            st.rerun()
+        st.info(
+            "Enter your key above, or set it in:\n\n"
+            "- `.streamlit/secrets.toml` → `OPENAI_API_KEY = \"sk-...\"`\n"
+            "- `.env` → `OPENAI_API_KEY=sk-...`\n"
+            "- Streamlit Cloud → *App settings → Secrets*"
+        )
+    else:
+        st.success("API key loaded.")
+
+# API key hard stop
 if not _get_api_key():
-    st.error("OPENAI_API_KEY not found.")
-    st.markdown(
-        "**Local:** add it to a `.env` file:  \n"
-        "`OPENAI_API_KEY=sk-your-key-here`\n\n"
-        "**Streamlit Cloud:** add it under *App settings → Secrets*."
-    )
+    st.warning("Enter your OpenAI API key in the sidebar to continue.")
     st.stop()
 
 # ── Module selector ───────────────────────────────────────────────────────────
