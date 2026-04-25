@@ -30,18 +30,45 @@ from PIL import Image as PILImage
 
 load_dotenv()
 
+MODEL      = "gemini-1.5-flash"
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{MODEL}:generateContent"
+)
+
 def _get_api_key() -> str | None:
     """Read Gemini API key: Streamlit secrets → env var → sidebar input."""
+    for candidate in [
+        lambda: st.secrets.get("GEMINI_API_KEY", ""),
+        lambda: os.getenv("GEMINI_API_KEY", ""),
+        lambda: st.session_state.get("gemini_api_key", ""),
+    ]:
+        try:
+            key = (candidate() or "").strip()
+            if key:
+                return key
+        except Exception:
+            pass
+    return None
+
+
+def _verify_key(key: str) -> tuple[bool, str]:
+    """Ping Gemini with a minimal request to validate the key."""
     try:
-        key = st.secrets.get("GEMINI_API_KEY", "")
-        if key:
-            return key
-    except (AttributeError, FileNotFoundError):
-        pass
-    env_key = os.getenv("GEMINI_API_KEY", "")
-    if env_key:
-        return env_key
-    return st.session_state.get("gemini_api_key", "") or None
+        r = http.post(
+            GEMINI_URL,
+            params={"key": key},
+            json={"contents": [{"parts": [{"text": "Hi"}]}],
+                  "generationConfig": {"maxOutputTokens": 5}},
+            timeout=10,
+        )
+        if r.ok:
+            return True, "Key verified."
+        body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        msg = body.get("error", {}).get("message", r.text[:120])
+        return False, msg
+    except Exception as e:
+        return False, str(e)
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -51,7 +78,6 @@ st.set_page_config(
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MODEL             = "gemini-1.5-flash"
 MAX_OUTPUT_TOKENS = 500
 VALID_SEVERITIES  = ["Normal", "Suspicious", "Critical"]
 VALID_CONFIDENCES = ["Low", "Medium", "High"]
@@ -257,12 +283,8 @@ MODULE_META = {
     },
 }
 
-# ── OpenAI Agents ─────────────────────────────────────────────────────────────
+# ── Gemini Agents ─────────────────────────────────────────────────────────────
 MIN_CALL_INTERVAL = 5  # seconds — safe under 15 RPM (Gemini free tier)
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{MODEL}:generateContent"
-)
 
 
 def _rate_limit_wait():
@@ -424,7 +446,8 @@ st.divider()
 # ── Sidebar — API key entry ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### Configuration")
-    if not _get_api_key():
+    key = _get_api_key()
+    if not key:
         entered = st.text_input(
             "Gemini API Key",
             type="password",
@@ -432,18 +455,22 @@ with st.sidebar:
             help="Free key at aistudio.google.com — no credit card needed",
         )
         if entered:
-            st.session_state["gemini_api_key"] = entered
-            st.success("Key saved for this session.")
+            st.session_state["gemini_api_key"] = entered.strip()
             st.rerun()
         st.info(
             "Get a free key at **aistudio.google.com**\n\n"
-            "Or set it in:\n"
-            "- `.env` → `GEMINI_API_KEY=AIza...`\n"
-            "- `.streamlit/secrets.toml` → `GEMINI_API_KEY = \"AIza...\"`\n"
-            "- Streamlit Cloud → *App settings → Secrets*"
+            "Or add to `.env` file:\n"
+            "```\nGEMINI_API_KEY=AIza...\n```"
         )
     else:
-        st.success("Gemini API key loaded.")
+        st.success(f"Key loaded: `{key[:8]}...`")
+        if st.button("Verify key", use_container_width=True):
+            with st.spinner("Testing key…"):
+                ok, msg = _verify_key(key)
+            if ok:
+                st.success("Key is valid!")
+            else:
+                st.error(f"Key rejected: {msg}")
 
     st.divider()
     st.markdown("**Gemini free tier limits**")
