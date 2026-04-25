@@ -3,941 +3,522 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Forensic AI — Pre-Autopsy Intelligence System</title>
-<meta name="description" content="AI-powered forensic screening across medical images, toxicology, and trauma photos. Structured reports in under 60 seconds." />
+<title>NeuroForensic AI — Multi-modal Forensic Screening</title>
+<meta name="description" content="AI-powered forensic screening across medical images, toxicology reports, and trauma photographs. Structured reports for investigators." />
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
     theme: {
       extend: {
         colors: {
-          slate: {
-            950: '#020617',
-            900: '#0f172a',
-            850: '#111827',
-            800: '#1e293b',
-            700: '#334155',
-            600: '#475569',
-          },
-          cyan: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2' },
-          blue: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' },
+          slate: { 950: '#020617', 900: '#0f172a', 800: '#1e293b', 700: '#334155', 600: '#475569' },
+          cyan:  { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2' },
+          blue:  { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' },
         },
         fontFamily: {
-          sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-          mono: ['"SF Mono"', '"Fira Code"', 'Consolas', 'monospace'],
+          sans: ['-apple-system','BlinkMacSystemFont','"Segoe UI"','Roboto','sans-serif'],
+          mono: ['"SF Mono"','"Fira Code"','Consolas','monospace'],
         },
       },
     },
   }
 </script>
 <style>
-  body { background-color: #020617; color: #e2e8f0; }
-  .gradient-text {
-    background: linear-gradient(135deg, #22d3ee 0%, #60a5fa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .hero-glow {
-    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34,211,238,0.12) 0%, transparent 60%);
-  }
-  .card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 12px;
-    transition: border-color 0.2s;
-  }
-  .card:hover { border-color: #22d3ee44; }
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-  }
-  .pipe-line {
-    position: absolute;
-    left: 19px;
-    top: 40px;
-    bottom: -16px;
-    width: 2px;
-    background: linear-gradient(to bottom, #22d3ee44, transparent);
-  }
-  .section-divider {
-    height: 1px;
-    background: linear-gradient(to right, transparent, #334155, transparent);
-    margin: 0;
-  }
-  .warn-box {
-    background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.04));
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 12px;
-  }
-  .ethical-box {
-    background: linear-gradient(135deg, rgba(234,179,8,0.08), rgba(234,179,8,0.04));
-    border: 1px solid rgba(234,179,8,0.35);
-    border-radius: 12px;
-  }
-  html { scroll-behavior: smooth; }
+  body { background:#020617; color:#e2e8f0; }
+  .gtext { background:linear-gradient(135deg,#22d3ee,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hero-bg { background:radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34,211,238,0.10) 0%, transparent 60%); }
+  .card { background:#1e293b; border:1px solid #334155; border-radius:12px; transition:border-color .2s; }
+  .card:hover { border-color:rgba(34,211,238,0.25); }
+  .badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:9999px; font-size:11px; font-weight:600; letter-spacing:.4px; }
+  .divider { height:1px; background:linear-gradient(to right,transparent,#334155,transparent); }
+  .warn-box { background:linear-gradient(135deg,rgba(239,68,68,.07),rgba(239,68,68,.03)); border:1px solid rgba(239,68,68,.28); border-radius:12px; }
+  .ethics-box { background:linear-gradient(135deg,rgba(234,179,8,.07),rgba(234,179,8,.03)); border:1px solid rgba(234,179,8,.32); border-radius:12px; }
 </style>
 </head>
-
 <body class="antialiased font-sans">
 
-<!-- ═══════════════════════════════════════════════
-     NAV
-═══════════════════════════════════════════════ -->
-<nav class="sticky top-0 z-50 border-b border-slate-800" style="background:rgba(2,6,23,0.92);backdrop-filter:blur(12px)">
+<!-- NAV -->
+<nav class="sticky top-0 z-50 border-b border-slate-800" style="background:rgba(2,6,23,.93);backdrop-filter:blur(14px)">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
-    <span class="text-sm font-bold tracking-tight text-white">🧠 Forensic AI</span>
+    <span class="text-sm font-bold text-white tracking-tight">🧠 NeuroForensic AI</span>
     <div class="hidden sm:flex items-center gap-6 text-xs text-slate-400 font-medium">
-      <a href="#problem"    class="hover:text-cyan-400 transition-colors">Problem</a>
-      <a href="#solution"   class="hover:text-cyan-400 transition-colors">Solution</a>
-      <a href="#pipeline"   class="hover:text-cyan-400 transition-colors">Pipeline</a>
-      <a href="#modules"    class="hover:text-cyan-400 transition-colors">Modules</a>
-      <a href="#data"       class="hover:text-cyan-400 transition-colors">Data</a>
-      <a href="#ethics"     class="hover:text-cyan-400 transition-colors">Ethics</a>
+      <a href="#problem"   class="hover:text-cyan-400 transition-colors">Problem</a>
+      <a href="#solution"  class="hover:text-cyan-400 transition-colors">Solution</a>
+      <a href="#pipeline"  class="hover:text-cyan-400 transition-colors">Pipeline</a>
+      <a href="#modules"   class="hover:text-cyan-400 transition-colors">Modules</a>
+      <a href="#data"      class="hover:text-cyan-400 transition-colors">Data</a>
+      <a href="#ethics"    class="hover:text-cyan-400 transition-colors">Ethics</a>
     </div>
-    <a href="https://github.com/Srimonchaari/neuroforensic-ai" target="_blank"
+    <a href="https://github.com/shreyabalki/neuroforensic-ai" target="_blank"
        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:border-cyan-500 hover:text-cyan-400 transition-all">
       GitHub →
     </a>
   </div>
 </nav>
 
-<!-- ═══════════════════════════════════════════════
-     HERO
-═══════════════════════════════════════════════ -->
-<header class="relative overflow-hidden hero-glow">
+<!-- HERO -->
+<header class="relative overflow-hidden hero-bg">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 text-center">
-
     <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border border-cyan-500/30 text-cyan-400 bg-cyan-500/5 mb-6">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-      Build with Healthcare — Hackathon Demo
+      Multi-modal Forensic Screening System
     </div>
-
     <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-tight mb-4">
-      <span class="gradient-text">Forensic AI</span>
+      <span class="gtext">NeuroForensic AI</span>
     </h1>
-
     <p class="text-lg sm:text-xl font-semibold text-slate-200 mb-3">
-      Pre-Autopsy Intelligence System
+      AI-powered forensic screening in under 60 seconds
     </p>
-
     <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed mb-8">
-      AI-powered forensic screening in under 60 seconds. Helps investigators analyze medical scans, trauma photographs, and toxicology reports — returning structured findings, severity ratings, and recommended next steps. Decision-support only. Expert review always required.
+      A decision-support system for field investigators. Accepts medical scans, trauma photographs, and toxicology text. Returns structured findings, severity classification, and recommended next steps. Expert review required for all outputs.
     </p>
-
-    <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
-      <a href="https://github.com/Srimonchaari/neuroforensic-ai" target="_blank"
-         class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold border border-slate-600 text-slate-200 hover:border-cyan-500 hover:text-white transition-all">
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mb-14">
+      <a href="https://github.com/shreyabalki/neuroforensic-ai" target="_blank"
+         class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold border border-slate-600 text-slate-200 hover:border-cyan-500 hover:text-white transition-all">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
         View GitHub
       </a>
-      <a href="https://github.com/Srimonchaari/neuroforensic-ai" target="_blank"
-         class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition-opacity shadow-lg shadow-cyan-500/20">
-        Run Demo →
+      <a href="https://github.com/shreyabalki/neuroforensic-ai" target="_blank"
+         class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition-opacity shadow-lg shadow-cyan-500/20">
+        Run App →
       </a>
     </div>
-
-    <!-- Stats row -->
-    <div class="grid grid-cols-3 gap-4 max-w-xl mx-auto mt-14">
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4 max-w-xl mx-auto">
       <div class="card p-4 text-center">
-        <div class="text-2xl font-black gradient-text">2M+</div>
+        <div class="text-2xl font-black gtext">2M+</div>
         <div class="text-xs text-slate-500 mt-1 leading-tight">Deaths uninvestigated<br/>per year globally</div>
       </div>
       <div class="card p-4 text-center">
-        <div class="text-2xl font-black gradient-text">~150</div>
+        <div class="text-2xl font-black gtext">~150</div>
         <div class="text-xs text-slate-500 mt-1 leading-tight">Forensic pathologists<br/>per 100M people</div>
       </div>
       <div class="card p-4 text-center">
-        <div class="text-2xl font-black gradient-text">&lt;60s</div>
+        <div class="text-2xl font-black gtext">&lt;60s</div>
         <div class="text-xs text-slate-500 mt-1 leading-tight">Time to structured<br/>screening report</div>
       </div>
     </div>
-
   </div>
 </header>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
 <main class="max-w-6xl mx-auto px-4 sm:px-6">
 
-<!-- ═══════════════════════════════════════════════
-     PROBLEM
-═══════════════════════════════════════════════ -->
-<section id="problem" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-red-500/10 text-red-400 border border-red-500/20">The Problem</span>
+<!-- ATTRIBUTION -->
+<section class="py-12">
+  <div class="card p-6 max-w-2xl">
+    <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Attribution</div>
+    <div class="space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+        <span class="text-xs text-slate-500 w-44 shrink-0">Project Idea &amp; Owner</span>
+        <a href="https://github.com/shreyabalki" target="_blank" class="text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          github.com/shreyabalki
+        </a>
+      </div>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+        <span class="text-xs text-slate-500 w-44 shrink-0">Contributor &amp; Collaborator</span>
+        <a href="https://github.com/Srimonchaari" target="_blank" class="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          github.com/Srimonchaari
+        </a>
+      </div>
+    </div>
   </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Millions of deaths go uninvestigated</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">Investigators in low-resource settings have no fast, unified tool to perform a structured first-look across body evidence, brain scans, and toxicology simultaneously.</p>
+</section>
 
+<div class="divider"></div>
+
+<!-- PROBLEM -->
+<section id="problem" class="py-20">
+  <div class="mb-3"><span class="badge bg-red-500/10 text-red-400 border border-red-500/20">Problem</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Millions of deaths go uninvestigated</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">Investigators in low-resource settings have no fast, unified tool to perform a structured first-pass across body evidence, scan images, and toxicology simultaneously.</p>
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
     <div class="card p-5">
       <div class="text-red-400 text-xl mb-3">🔬</div>
-      <h3 class="text-sm font-bold text-white mb-1">Severe Expert Shortage</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Only ~150 forensic pathologists per 100 million people. Rural and low-income regions have near-zero access to specialists.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Forensic Expert Shortage</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Approximately 150 forensic pathologists per 100 million people globally. Access is concentrated in urban centres. Rural and low-income regions operate with little to no specialist coverage.</p>
     </div>
     <div class="card p-5">
       <div class="text-orange-400 text-xl mb-3">⏳</div>
-      <h3 class="text-sm font-bold text-white mb-1">Delayed Investigations</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Waiting days or weeks for specialist review allows evidence to degrade and cases to go cold. Time-sensitive triage is unavailable.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Delayed Case Review</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Waiting days or weeks for specialist analysis allows evidence to degrade and critical investigative windows to close. There is no accessible mechanism for fast first-pass triage.</p>
     </div>
     <div class="card p-5">
       <div class="text-yellow-400 text-xl mb-3">🧩</div>
       <h3 class="text-sm font-bold text-white mb-1">Fragmented Tooling</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Medical imaging, toxicology analysis, and trauma review are handled by entirely separate tools with no unified investigator workflow.</p>
+      <p class="text-xs text-slate-400 leading-relaxed">Medical imaging, toxicology analysis, and external trauma review are handled by entirely separate tools with no shared workflow or unified reporting format for investigators.</p>
     </div>
     <div class="card p-5">
       <div class="text-blue-400 text-xl mb-3">🌍</div>
-      <h3 class="text-sm font-bold text-white mb-1">Low-Resource Gap</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Developing regions lack affordable, lightweight forensic triage tools that function without specialist infrastructure or cloud-heavy systems.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Low-Resource Access Gap</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Existing medical AI tools are designed for clinical environments in well-resourced settings. They are not built for investigators who need lightweight, accessible forensic triage.</p>
     </div>
     <div class="card p-5">
-      <div class="text-purple-400 text-xl mb-3">📁</div>
-      <h3 class="text-sm font-bold text-white mb-1">No First-Pass Screening</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Investigators often have no way to rapidly assess which cases require immediate escalation. Prioritization is manual and inconsistent.</p>
+      <div class="text-purple-400 text-xl mb-3">📋</div>
+      <h3 class="text-sm font-bold text-white mb-1">Inconsistent Reporting</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Field investigator reports are often informal, unstructured, and inconsistently communicated — reducing their value for downstream specialist review and case escalation decisions.</p>
     </div>
     <div class="card p-5">
       <div class="text-cyan-400 text-xl mb-3">📊</div>
-      <h3 class="text-sm font-bold text-white mb-1">Unstructured Reporting</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Findings from field investigators are often informal, unstructured, and inconsistently communicated — slowing the chain of custody.</p>
+      <h3 class="text-sm font-bold text-white mb-1">No Prioritisation System</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Without structured severity ratings, investigators have no systematic basis for deciding which cases require immediate specialist escalation versus routine follow-up.</p>
     </div>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     SOLUTION
-═══════════════════════════════════════════════ -->
+<!-- SOLUTION -->
 <section id="solution" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">The Solution</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Forensic AI — any investigator, anywhere</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">A unified multi-modal screening tool that accepts medical scans, trauma photos, and toxicology text — returning a structured forensic report in under 60 seconds. No specialist on-site required.</p>
-
-  <div class="grid sm:grid-cols-2 gap-6">
+  <div class="mb-3"><span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Solution</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Structured forensic screening — any investigator, anywhere</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">A single tool that accepts multiple forensic evidence types and returns a consistent, structured report in under 60 seconds. Designed to surface observable signals and recommend escalation — not to replace specialist judgement.</p>
+  <div class="grid sm:grid-cols-2 gap-5">
     <div class="space-y-3">
-      <div class="flex items-start gap-3 card p-4">
-        <span class="text-cyan-400 mt-0.5">✦</span>
-        <div>
-          <div class="text-sm font-semibold text-white">Multi-modal input</div>
-          <div class="text-xs text-slate-400 mt-0.5">Accepts medical images (JPEG/PNG) and unstructured text (lab reports). Six dedicated forensic modules, each with tailored analysis.</div>
-        </div>
-      </div>
-      <div class="flex items-start gap-3 card p-4">
-        <span class="text-cyan-400 mt-0.5">✦</span>
-        <div>
-          <div class="text-sm font-semibold text-white">Structured JSON output</div>
-          <div class="text-xs text-slate-400 mt-0.5">Returns 14-field reports: findings, confidence, severity, suspected region, interpretation, differential considerations, next steps, and investigator action.</div>
-        </div>
-      </div>
-      <div class="flex items-start gap-3 card p-4">
-        <span class="text-cyan-400 mt-0.5">✦</span>
-        <div>
-          <div class="text-sm font-semibold text-white">Three-level severity</div>
-          <div class="text-xs text-slate-400 mt-0.5">Each report is classified as Normal, Suspicious, or Critical — enabling rapid triage and prioritization across a case queue.</div>
-        </div>
-      </div>
+      <div class="flex items-start gap-3 card p-4"><span class="text-cyan-400 mt-0.5 shrink-0">✦</span><div><div class="text-sm font-semibold text-white">Multi-modal input</div><div class="text-xs text-slate-400 mt-0.5">Accepts medical images (JPEG/PNG) and unstructured text. Six independent modules with tailored analysis per evidence type.</div></div></div>
+      <div class="flex items-start gap-3 card p-4"><span class="text-cyan-400 mt-0.5 shrink-0">✦</span><div><div class="text-sm font-semibold text-white">Structured JSON output</div><div class="text-xs text-slate-400 mt-0.5">Every analysis returns a consistent 14-field report: findings, severity, confidence, region, interpretation, next steps, and investigator action.</div></div></div>
+      <div class="flex items-start gap-3 card p-4"><span class="text-cyan-400 mt-0.5 shrink-0">✦</span><div><div class="text-sm font-semibold text-white">Three-level severity classification</div><div class="text-xs text-slate-400 mt-0.5">Normal, Suspicious, or Critical — providing a clear basis for case prioritisation and escalation decisions.</div></div></div>
     </div>
     <div class="space-y-3">
-      <div class="flex items-start gap-3 card p-4">
-        <span class="text-blue-400 mt-0.5">✦</span>
-        <div>
-          <div class="text-sm font-semibold text-white">Screening only — not diagnosis</div>
-          <div class="text-xs text-slate-400 mt-0.5">The system performs first-pass pattern screening. It does not determine cause of death, provide clinical diagnoses, or generate legally admissible conclusions.</div>
-        </div>
-      </div>
-      <div class="flex items-start gap-3 card p-4">
-        <span class="text-blue-400 mt-0.5">✦</span>
-        <div>
-          <div class="text-sm font-semibold text-white">AI-annotated images</div>
-          <div class="text-xs text-slate-400 mt-0.5">Image outputs include approximate bounding-box overlays on regions of interest. Marked clearly as AI-estimated and for triage reference only.</div>
-        </div>
-      </div>
-      <div class="flex items-start gap-3 card p-4">
-        <span class="text-blue-400 mt-0.5">✦</span>
-        <div>
-          <div class="text-sm font-semibold text-white">Persistent case history</div>
-          <div class="text-xs text-slate-400 mt-0.5">All completed analyses are stored locally and accessible from the sidebar. Sessions persist across page refreshes. Cases can be reloaded without re-analyzing.</div>
-        </div>
-      </div>
+      <div class="flex items-start gap-3 card p-4"><span class="text-blue-400 mt-0.5 shrink-0">✦</span><div><div class="text-sm font-semibold text-white">Screening only — not diagnosis</div><div class="text-xs text-slate-400 mt-0.5">Extracts observable signals from the input. Does not determine cause of death, provide clinical diagnoses, or generate legal conclusions.</div></div></div>
+      <div class="flex items-start gap-3 card p-4"><span class="text-blue-400 mt-0.5 shrink-0">✦</span><div><div class="text-sm font-semibold text-white">AI-annotated images</div><div class="text-xs text-slate-400 mt-0.5">Image outputs include approximate bounding-box overlays on regions of interest. Marked as AI-estimated and for triage reference only.</div></div></div>
+      <div class="flex items-start gap-3 card p-4"><span class="text-blue-400 mt-0.5 shrink-0">✦</span><div><div class="text-sm font-semibold text-white">Expert review enforced</div><div class="text-xs text-slate-400 mt-0.5">Every report includes a built-in expert-review disclaimer and escalation guidance. The system cannot be used to generate final conclusions.</div></div></div>
     </div>
   </div>
-
-  <!-- Severity badges -->
   <div class="grid grid-cols-3 gap-4 mt-8 max-w-lg">
-    <div class="rounded-xl p-4 text-center" style="background:rgba(46,125,50,0.10);border:1px solid rgba(46,125,50,0.30)">
+    <div class="rounded-xl p-4 text-center" style="background:rgba(46,125,50,.10);border:1px solid rgba(46,125,50,.28)">
       <div class="text-sm font-bold text-green-400 mb-1">✓ Normal</div>
-      <div class="text-xs text-green-600">No anomalies in observable range</div>
+      <div class="text-xs text-green-600 leading-tight">No anomalies in observable range</div>
     </div>
-    <div class="rounded-xl p-4 text-center" style="background:rgba(230,81,0,0.10);border:1px solid rgba(230,81,0,0.30)">
+    <div class="rounded-xl p-4 text-center" style="background:rgba(230,81,0,.10);border:1px solid rgba(230,81,0,.28)">
       <div class="text-sm font-bold text-orange-400 mb-1">⚠ Suspicious</div>
-      <div class="text-xs text-orange-600">Specialist review warranted</div>
+      <div class="text-xs text-orange-600 leading-tight">Specialist review warranted</div>
     </div>
-    <div class="rounded-xl p-4 text-center" style="background:rgba(183,28,28,0.10);border:1px solid rgba(183,28,28,0.30)">
+    <div class="rounded-xl p-4 text-center" style="background:rgba(183,28,28,.10);border:1px solid rgba(183,28,28,.28)">
       <div class="text-sm font-bold text-red-400 mb-1">🔴 Critical</div>
-      <div class="text-xs text-red-600">Urgent expert consultation</div>
+      <div class="text-xs text-red-600 leading-tight">Urgent expert consultation</div>
     </div>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     HOW WE BUILT IT
-═══════════════════════════════════════════════ -->
-<section id="built" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Architecture</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">How this system was built</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">Built entirely with Python and Streamlit. No custom model training. No GPU infrastructure. No heavy ML frameworks. The system is lightweight enough to run from a laptop or deploy for free on Streamlit Cloud.</p>
-
-  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-    <div class="card p-5">
-      <div class="text-2xl mb-3">🐍</div>
-      <div class="text-sm font-bold text-white mb-1">Python 3.10+</div>
-      <div class="text-xs text-slate-400">Core application language. Minimal dependency stack: requests, Pillow, python-dotenv, Streamlit.</div>
-    </div>
-    <div class="card p-5">
-      <div class="text-2xl mb-3">🖥</div>
-      <div class="text-sm font-bold text-white mb-1">Streamlit</div>
-      <div class="text-xs text-slate-400">Python-native web framework. Handles UI, session state, file uploads, and sidebar case history.</div>
-    </div>
-    <div class="card p-5">
-      <div class="text-2xl mb-3">⚡</div>
-      <div class="text-sm font-bold text-white mb-1">Gemini 2.5 Flash</div>
-      <div class="text-xs text-slate-400">Google's multimodal AI accessed via API. Handles both image vision and text NLP. Free tier available.</div>
-    </div>
-    <div class="card p-5">
-      <div class="text-2xl mb-3">🖼</div>
-      <div class="text-sm font-bold text-white mb-1">Pillow (PIL)</div>
-      <div class="text-xs text-slate-400">Image resizing and compression before API upload. Bounding-box annotation drawing without OpenCV.</div>
-    </div>
-  </div>
-
-  <!-- Model strategy callout -->
-  <div class="card p-6 border-cyan-500/20">
-    <h3 class="text-base font-bold text-cyan-400 mb-3">Model Strategy — No Custom Training</h3>
-    <div class="grid sm:grid-cols-2 gap-6">
-      <div>
-        <p class="text-xs text-slate-400 leading-relaxed mb-3">This system does <strong class="text-white">not</strong> train any custom deep learning models. There are no model weights, no training datasets, and no GPU requirements. All AI inference is performed through the Google Gemini API using a pre-trained multimodal model.</p>
-        <p class="text-xs text-slate-400 leading-relaxed">Outputs are shaped entirely by prompt engineering: forensic-specific instructions, a strict JSON output schema, hallucination-reduction rules, and mandatory expert-review disclaimers built into every prompt.</p>
-      </div>
-      <div class="space-y-2">
-        <div class="text-xs text-slate-300 font-semibold mb-2">Why API-first over custom training:</div>
-        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span> Builds and deploys in days, not months</div>
-        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span> No GPU infrastructure or hosting costs</div>
-        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span> Runs on any laptop or cloud free tier</div>
-        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span> Modular — each forensic module is independent</div>
-        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span> Updatable by changing prompts, not retraining</div>
-        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span> Zero compute cost for low-resource environments</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════════
-     PIPELINE
-═══════════════════════════════════════════════ -->
+<!-- PIPELINE -->
 <section id="pipeline" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Pipeline</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">How it works — step by step</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">The full process from investigator input to structured report takes under 60 seconds on average with default settings.</p>
-
-  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div class="card p-5 relative">
+  <div class="mb-3"><span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Pipeline</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">How it works</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">The full process from investigator input to structured report in under 60 seconds.</p>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+    <div class="card p-5">
       <div class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-xs font-bold text-cyan-400 mb-3">1</div>
-      <h3 class="text-sm font-bold text-white mb-1">Select Module & Upload</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Investigator selects the forensic module (e.g. Chest X-ray, Toxicology) and uploads an image or pastes text. Each module only accepts the input types it is designed for.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Upload Input</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Investigator selects the forensic module and uploads an image or pastes text. Each module accepts only the input types it is designed to process.</p>
     </div>
     <div class="card p-5">
       <div class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-xs font-bold text-cyan-400 mb-3">2</div>
-      <h3 class="text-sm font-bold text-white mb-1">Preprocessing</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">Images are resized to 512px max dimension and compressed to JPEG at 80% quality before sending to the API. Text inputs are passed directly as plain content.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Preprocess</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Images are resized to 512px max, compressed to JPEG 80%, and base64-encoded before API submission. Text inputs are passed directly as plain content.</p>
     </div>
     <div class="card p-5">
       <div class="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-400 mb-3">3</div>
-      <h3 class="text-sm font-bold text-white mb-1">API Inference</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">The preprocessed input is sent to Gemini 2.5 Flash with a module-specific system prompt. The model is instructed to return strict JSON only — no explanatory text, no markdown.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Analyze with Gemini Flash</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">Input is sent to Google Gemini 2.5 Flash with a module-specific system prompt. The model is instructed to return strict JSON only, with no explanatory text.</p>
     </div>
     <div class="card p-5">
       <div class="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-400 mb-3">4</div>
-      <h3 class="text-sm font-bold text-white mb-1">JSON Parsing & Validation</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">The raw response is parsed and validated against the expected schema. If parsing fails, a graceful fallback result is returned. The app never crashes on malformed output.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Generate JSON Report</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">The API response is parsed and validated against a 14-field schema. If parsing fails, a graceful fallback result is returned without crashing the application.</p>
     </div>
     <div class="card p-5">
       <div class="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xs font-bold text-purple-400 mb-3">5</div>
-      <h3 class="text-sm font-bold text-white mb-1">Image Annotation</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">For image modules, the system draws bounding boxes on regions of interest using PIL. Coordinates come from the model's output or fall back to module-specific approximate positions.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Render Findings</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">The structured report is rendered as a severity-coded visual card with findings, interpretation, differential considerations, and recommended next steps.</p>
     </div>
     <div class="card p-5">
       <div class="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-xs font-bold text-green-400 mb-3">6</div>
-      <h3 class="text-sm font-bold text-white mb-1">Report & Escalation</h3>
-      <p class="text-xs text-slate-400 leading-relaxed">The structured report is rendered as a visual card. The investigator reviews findings, severity, and recommended next steps — then decides whether to escalate to a specialist.</p>
+      <h3 class="text-sm font-bold text-white mb-1">Review and Escalate</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">The investigator reviews the report and decides whether to escalate to a forensic specialist, based on severity and investigator action guidance.</p>
     </div>
   </div>
-
-  <!-- Schema example -->
-  <div class="mt-8 card p-5">
-    <div class="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-widest">Example report structure (JSON)</div>
+  <!-- Schema -->
+  <div class="card p-5">
+    <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Report schema (JSON)</div>
     <pre class="font-mono text-xs leading-relaxed overflow-x-auto" style="color:#a8d8ea"><code><span style="color:#81c784">"module"</span>: <span style="color:#ffd54f">"Chest X-ray"</span>,
 <span style="color:#81c784">"case_summary"</span>: <span style="color:#ffd54f">"Bilateral opacity with cardiomegaly present."</span>,
-<span style="color:#81c784">"anomalies"</span>: <span style="color:#ffd54f">"Yes"</span>,  <span style="color:#81c784">"confidence"</span>: <span style="color:#ffd54f">"Medium"</span>,  <span style="color:#81c784">"severity"</span>: <span style="color:#ffd54f">"Suspicious"</span>,
+<span style="color:#81c784">"anomalies"</span>: <span style="color:#ffd54f">"Yes"</span>,  <span style="color:#81c784">"severity"</span>: <span style="color:#ffd54f">"Suspicious"</span>,  <span style="color:#81c784">"confidence"</span>: <span style="color:#ffd54f">"Medium"</span>,
+<span style="color:#81c784">"suspected_region"</span>: <span style="color:#ffd54f">"Bilateral lung fields"</span>,
 <span style="color:#81c784">"key_findings"</span>: <span style="color:#ce93d8">["Bilateral lower lobe opacity", "Cardiothoracic ratio &gt; 0.5"]</span>,
+<span style="color:#81c784">"recommended_next_steps"</span>: <span style="color:#ce93d8">["Correlate with toxicology", "Refer to forensic pathologist"]</span>,
 <span style="color:#81c784">"investigator_action"</span>: <span style="color:#ffd54f">"Escalate to forensic pathologist. Priority: High."</span>,
-<span style="color:#81c784">"disclaimer"</span>: <span style="color:#ffd54f">"Demo only. Not clinical or legal advice. Expert review required."</span></code></pre>
+<span style="color:#81c784">"disclaimer"</span>: <span style="color:#ffd54f">"AI screening only. Expert review required."</span></code></pre>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     MODULES
-═══════════════════════════════════════════════ -->
-<section id="modules" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-purple-500/10 text-purple-400 border border-purple-500/20">Modules</span>
+<!-- HOW WE BUILT IT -->
+<section class="py-20">
+  <div class="mb-3"><span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Architecture</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">How it was built</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">Built with Python and Streamlit. No custom model training. No GPU infrastructure. Lightweight enough to run from a laptop or deploy on Streamlit Cloud at zero cost.</p>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="card p-5"><div class="text-2xl mb-3">🐍</div><div class="text-sm font-bold text-white mb-1">Python 3.10+</div><div class="text-xs text-slate-400">Core application language. Minimal dependencies: requests, Pillow, python-dotenv, Streamlit.</div></div>
+    <div class="card p-5"><div class="text-2xl mb-3">🖥</div><div class="text-sm font-bold text-white mb-1">Streamlit</div><div class="text-xs text-slate-400">Python-native web framework. Handles UI, session state, file upload, sidebar history, and responsive layout.</div></div>
+    <div class="card p-5"><div class="text-2xl mb-3">⚡</div><div class="text-sm font-bold text-white mb-1">Gemini 2.5 Flash</div><div class="text-xs text-slate-400">Google's multimodal AI accessed via API. Handles image vision and text NLP in a single inference call.</div></div>
+    <div class="card p-5"><div class="text-2xl mb-3">🖼</div><div class="text-sm font-bold text-white mb-1">Pillow (PIL)</div><div class="text-xs text-slate-400">Image resizing and compression before API upload. Bounding-box annotation drawing without OpenCV dependency.</div></div>
   </div>
+  <div class="card p-6 border-cyan-500/20">
+    <h3 class="text-sm font-bold text-cyan-400 mb-3">Model Strategy — No Custom Training</h3>
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">This system does <strong class="text-white">not</strong> train any custom deep learning model. There are no model weights, no training pipelines, and no GPU requirements. All inference runs through the Google Gemini API.</p>
+        <p class="text-xs text-slate-400 leading-relaxed">Outputs are shaped by module-specific system prompts, a strict JSON schema, hallucination-reduction rules, and mandatory expert-review disclaimers embedded in every prompt.</p>
+      </div>
+      <div class="space-y-2">
+        <div class="text-xs text-slate-300 font-semibold mb-2">Why API-first:</div>
+        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span>Builds and iterates in days without retraining</div>
+        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span>No GPU infrastructure or model hosting costs</div>
+        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span>Deployable on free-tier cloud platforms</div>
+        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span>Each module is independent and updatable via prompt</div>
+        <div class="flex items-center gap-2 text-xs text-slate-400"><span class="text-cyan-400">→</span>Accessible in low-resource environments</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- MODULES -->
+<section id="modules" class="py-20">
+  <div class="mb-3"><span class="badge bg-purple-500/10 text-purple-400 border border-purple-500/20">Modules</span></div>
   <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">6 forensic modules</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">Each module is fully independent with its own system prompt, accepted input types, sample data, and report schema. Switching modules clears all previous state.</p>
-
+  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">Each module operates independently with its own system prompt, accepted input types, and report schema. Switching modules resets all application state.</p>
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
-    <div class="card p-5 hover:border-cyan-500/30 transition-colors">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-2xl">🫁</span>
-        <span class="text-sm font-bold text-white">Chest X-ray</span>
-      </div>
-      <div class="space-y-1 mb-4">
-        <div class="text-xs text-slate-400"><span class="text-slate-500">Detects:</span> Lung opacity, pleural fluid, pneumothorax, rib fracture patterns, mediastinal widening</div>
-      </div>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700">
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3"><span class="text-2xl">🫁</span><span class="text-sm font-bold text-white">Chest X-ray</span></div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">Screens for lung opacity, pleural fluid, pneumothorax, rib fracture patterns, and mediastinal widening.</p>
+      <div class="flex flex-wrap gap-1.5 pt-3 border-t border-slate-700">
         <span class="badge bg-slate-700/50 text-slate-400">JPEG / PNG</span>
         <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">NIH ChestX-ray14</span>
       </div>
     </div>
-
-    <div class="card p-5 hover:border-cyan-500/30 transition-colors">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-2xl">🧠</span>
-        <span class="text-sm font-bold text-white">Brain MRI / CT</span>
-      </div>
-      <div class="space-y-1 mb-4">
-        <div class="text-xs text-slate-400"><span class="text-slate-500">Detects:</span> Masses, hemorrhage, edema, hemispheric asymmetry, midline shift indicators, density irregularities</div>
-      </div>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700">
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3"><span class="text-2xl">🧠</span><span class="text-sm font-bold text-white">Brain MRI / CT</span></div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">Screens for masses, hemorrhage, edema, hemispheric asymmetry, midline shift indicators, and density irregularities.</p>
+      <div class="flex flex-wrap gap-1.5 pt-3 border-t border-slate-700">
         <span class="badge bg-slate-700/50 text-slate-400">JPEG / PNG</span>
         <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">BraTS 2023</span>
       </div>
     </div>
-
-    <div class="card p-5 hover:border-cyan-500/30 transition-colors">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-2xl">🦴</span>
-        <span class="text-sm font-bold text-white">Full Body CT</span>
-      </div>
-      <div class="space-y-1 mb-4">
-        <div class="text-xs text-slate-400"><span class="text-slate-500">Detects:</span> Fractures, internal bleeding indicators, organ density anomalies, soft tissue disruption, trauma patterns</div>
-      </div>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700">
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3"><span class="text-2xl">🦴</span><span class="text-sm font-bold text-white">Full Body CT</span></div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">Screens for fractures, internal bleeding indicators, organ density anomalies, and soft tissue disruption.</p>
+      <div class="flex flex-wrap gap-1.5 pt-3 border-t border-slate-700">
         <span class="badge bg-slate-700/50 text-slate-400">JPEG / PNG</span>
         <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">RSNA Hemorrhage</span>
       </div>
     </div>
-
-    <div class="card p-5 hover:border-cyan-500/30 transition-colors">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-2xl">🧪</span>
-        <span class="text-sm font-bold text-white">Toxicology Report</span>
-      </div>
-      <div class="space-y-1 mb-4">
-        <div class="text-xs text-slate-400"><span class="text-slate-500">Detects:</span> Abnormal substances, alcohol markers, opioids, benzodiazepines, stimulants, overdose risk indicators, poly-substance flags</div>
-      </div>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700">
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3"><span class="text-2xl">🧪</span><span class="text-sm font-bold text-white">Toxicology Report</span></div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">Screens for substances above reference thresholds, alcohol markers, opioids, benzodiazepines, overdose risk, and poly-substance interactions.</p>
+      <div class="flex flex-wrap gap-1.5 pt-3 border-t border-slate-700">
         <span class="badge bg-slate-700/50 text-slate-400">Text / .txt</span>
         <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">MIMIC-IV</span>
       </div>
     </div>
-
-    <div class="card p-5 hover:border-cyan-500/30 transition-colors">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-2xl">📷</span>
-        <span class="text-sm font-bold text-white">External Trauma</span>
-      </div>
-      <div class="space-y-1 mb-4">
-        <div class="text-xs text-slate-400"><span class="text-slate-500">Detects:</span> Visible injury patterns, bruising distribution, lacerations, burns, ligature-like marks, petechiae indicators</div>
-      </div>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700">
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3"><span class="text-2xl">📷</span><span class="text-sm font-bold text-white">External Trauma</span></div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">Screens for visible injury patterns, bruising distribution, lacerations, burns, and ligature-like marks using INTERPOL DVI protocol language.</p>
+      <div class="flex flex-wrap gap-1.5 pt-3 border-t border-slate-700">
         <span class="badge bg-slate-700/50 text-slate-400">JPEG / PNG</span>
         <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">INTERPOL DVI</span>
       </div>
     </div>
-
-    <div class="card p-5 hover:border-cyan-500/30 transition-colors">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-2xl">⚡</span>
-        <span class="text-sm font-bold text-white">Deep Brain Screening</span>
-      </div>
-      <div class="space-y-1 mb-4">
-        <div class="text-xs text-slate-400"><span class="text-slate-500">Detects:</span> Visual brain pattern anomalies, structural asymmetry, deep-region irregularities, white matter signal changes</div>
-      </div>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-700">
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3"><span class="text-2xl">⚡</span><span class="text-sm font-bold text-white">Deep Brain Screening</span></div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">Screens for structural asymmetry, deep-region irregularities, white matter signal changes, and occipital and parietal density anomalies.</p>
+      <div class="flex flex-wrap gap-1.5 pt-3 border-t border-slate-700">
         <span class="badge bg-slate-700/50 text-slate-400">MRI / CT image</span>
         <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">BraTS 2023</span>
       </div>
     </div>
-
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     DATA SOURCES
-═══════════════════════════════════════════════ -->
+<!-- DATA SOURCES -->
 <section id="data" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-green-500/10 text-green-400 border border-green-500/20">Data</span>
-  </div>
+  <div class="mb-3"><span class="badge bg-green-500/10 text-green-400 border border-green-500/20">Data</span></div>
   <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Dataset grounding</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-4 leading-relaxed">These datasets are used for reference, prompt design, and domain grounding. They are <strong class="text-white">not</strong> used to retrain or fine-tune any custom model.</p>
+  <p class="text-slate-400 text-sm max-w-2xl mb-2 leading-relaxed">The following datasets are used for domain grounding, reference, and prompt design. They are <strong class="text-white">not</strong> used to train or fine-tune any custom model.</p>
   <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-500/5 border border-green-500/20 text-green-400 mb-10">
     Only public or credentialed datasets referenced. No private patient data stored.
   </div>
-
-  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-    <div class="card p-4">
-      <div class="text-xs font-bold text-white mb-1">NIH ChestX-ray14</div>
-      <div class="text-xs text-slate-500 mb-2">112,120 labeled chest X-rays</div>
-      <span class="badge bg-green-500/10 text-green-400">Public domain</span>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold text-white mb-1">BraTS 2023</div>
-      <div class="text-xs text-slate-500 mb-2">Multi-modal brain MRI volumes</div>
-      <span class="badge bg-blue-500/10 text-blue-400">Free academic</span>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold text-white mb-1">RSNA Hemorrhage</div>
-      <div class="text-xs text-slate-500 mb-2">25,000 intracranial CT scans</div>
-      <span class="badge bg-green-500/10 text-green-400">Kaggle public</span>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold text-white mb-1">MIMIC-IV</div>
-      <div class="text-xs text-slate-500 mb-2">300,000+ clinical notes</div>
-      <span class="badge bg-yellow-500/10 text-yellow-400">Credentialed</span>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold text-white mb-1">EEG-ImageNet</div>
-      <div class="text-xs text-slate-500 mb-2">EEG and visual stimulus pairs</div>
-      <span class="badge bg-purple-500/10 text-purple-400">Research</span>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold text-white mb-1">INTERPOL DVI</div>
-      <div class="text-xs text-slate-500 mb-2">Disaster Victim Identification protocol</div>
-      <span class="badge bg-green-500/10 text-green-400">Public standard</span>
-    </div>
-  </div>
-
-  <!-- Data collection + processing -->
-  <div class="grid sm:grid-cols-2 gap-6">
-    <div class="card p-6">
-      <h3 class="text-sm font-bold text-white mb-3">Data Collection</h3>
-      <ul class="space-y-2 text-xs text-slate-400">
-        <li class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>No automatic data collection of any kind</li>
-        <li class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>No background scraping or passive monitoring</li>
-        <li class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>User manually provides all input for each session</li>
-        <li class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>Inputs are either uploaded images or pasted text</li>
-        <li class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>The system processes only what the user explicitly provides</li>
-      </ul>
-    </div>
-    <div class="card p-6">
-      <h3 class="text-sm font-bold text-white mb-3">Data Processing</h3>
-      <div class="text-xs text-slate-400 font-medium mb-2">Images:</div>
-      <ul class="space-y-1 text-xs text-slate-400 mb-3">
-        <li class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Resized to max 512px, compressed to JPEG 80%</li>
-        <li class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Base64-encoded and sent to Gemini API</li>
-        <li class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Not stored beyond the active session</li>
-      </ul>
-      <div class="text-xs text-slate-400 font-medium mb-2">Text:</div>
-      <ul class="space-y-1 text-xs text-slate-400">
-        <li class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Passed directly as user-provided lab report content</li>
-        <li class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>AI returns structured JSON, rendered as report card</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════════
-     ANALYSIS APPROACH
-═══════════════════════════════════════════════ -->
-<section class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Analysis</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Analysis approach</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10 leading-relaxed">The system performs screening-level pattern recognition — not diagnosis. It extracts observable signals from the input and surfaces them as structured findings for an investigator to act on.</p>
-
-  <div class="grid sm:grid-cols-2 gap-8 items-start">
-    <div>
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">What the system extracts</div>
-      <div class="space-y-3">
-        <div class="flex items-start gap-3 card p-3">
-          <span class="text-cyan-400 text-xs mt-0.5 shrink-0">◆</span>
-          <div><span class="text-xs font-semibold text-white">Findings</span><span class="text-xs text-slate-400"> — 1–4 observable signals from the input</span></div>
-        </div>
-        <div class="flex items-start gap-3 card p-3">
-          <span class="text-cyan-400 text-xs mt-0.5 shrink-0">◆</span>
-          <div><span class="text-xs font-semibold text-white">Suspected region</span><span class="text-xs text-slate-400"> — specific anatomical area of concern</span></div>
-        </div>
-        <div class="flex items-start gap-3 card p-3">
-          <span class="text-cyan-400 text-xs mt-0.5 shrink-0">◆</span>
-          <div><span class="text-xs font-semibold text-white">Confidence level</span><span class="text-xs text-slate-400"> — Low, Medium, or High</span></div>
-        </div>
-        <div class="flex items-start gap-3 card p-3">
-          <span class="text-cyan-400 text-xs mt-0.5 shrink-0">◆</span>
-          <div><span class="text-xs font-semibold text-white">Severity</span><span class="text-xs text-slate-400"> — Normal, Suspicious, or Critical</span></div>
-        </div>
-        <div class="flex items-start gap-3 card p-3">
-          <span class="text-cyan-400 text-xs mt-0.5 shrink-0">◆</span>
-          <div><span class="text-xs font-semibold text-white">Recommended next steps</span><span class="text-xs text-slate-400"> — for the investigator</span></div>
-        </div>
-        <div class="flex items-start gap-3 card p-3">
-          <span class="text-cyan-400 text-xs mt-0.5 shrink-0">◆</span>
-          <div><span class="text-xs font-semibold text-white">Investigator action</span><span class="text-xs text-slate-400"> — one-sentence escalation guidance</span></div>
-        </div>
-      </div>
-    </div>
-    <div>
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Language constraints</div>
-      <p class="text-xs text-slate-400 leading-relaxed mb-4">Every system prompt explicitly instructs the AI to use cautious, hedged language throughout all outputs. The model never claims certainty.</p>
-      <div class="space-y-2 font-mono text-xs">
-        <div class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">"consistent with"</div>
-        <div class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">"suggests"</div>
-        <div class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">"warrants review"</div>
-        <div class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">"may indicate"</div>
-        <div class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">"requires expert validation"</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════════
-     CONSENT & PRIVACY
-═══════════════════════════════════════════════ -->
-<section class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-green-500/10 text-green-400 border border-green-500/20">Privacy</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Consent & privacy</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10">The system processes only what the user explicitly provides. Nothing is collected, tracked, or stored beyond the active session.</p>
-
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div class="card p-5 border-green-500/10">
-      <div class="text-green-400 text-lg mb-2">🔒</div>
-      <div class="text-sm font-bold text-white mb-1">No automatic collection</div>
-      <div class="text-xs text-slate-400">The app does not collect, scrape, or monitor any data automatically. It responds only to user-provided input.</div>
-    </div>
-    <div class="card p-5 border-green-500/10">
-      <div class="text-green-400 text-lg mb-2">🗑</div>
-      <div class="text-sm font-bold text-white mb-1">No long-term storage</div>
-      <div class="text-xs text-slate-400">Uploaded images and case content are not stored after the session ends. No cloud database, no file retention.</div>
-    </div>
-    <div class="card p-5 border-green-500/10">
-      <div class="text-green-400 text-lg mb-2">👤</div>
-      <div class="text-sm font-bold text-white mb-1">No personal data stored</div>
-      <div class="text-xs text-slate-400">No biometric data, no patient identifiers, no case metadata is stored by the application itself.</div>
-    </div>
-    <div class="card p-5 border-green-500/10">
-      <div class="text-green-400 text-lg mb-2">📵</div>
-      <div class="text-sm font-bold text-white mb-1">No background tracking</div>
-      <div class="text-xs text-slate-400">No analytics, no session recording, no behavioral tracking is present in the application layer.</div>
-    </div>
-    <div class="card p-5 border-green-500/10">
-      <div class="text-green-400 text-lg mb-2">⚖️</div>
-      <div class="text-sm font-bold text-white mb-1">User responsibility</div>
-      <div class="text-xs text-slate-400">The user is solely responsible for ensuring that any data provided to the system is used lawfully and with appropriate consent.</div>
-    </div>
-    <div class="card p-5 border-green-500/10">
-      <div class="text-green-400 text-lg mb-2">📤</div>
-      <div class="text-sm font-bold text-white mb-1">Third-party API</div>
-      <div class="text-xs text-slate-400">Inputs are sent to Google Gemini API for inference. Users should review Google's API terms and data handling policies for applicable protections.</div>
-    </div>
+    <div class="card p-4"><div class="text-xs font-bold text-white mb-1">NIH ChestX-ray14</div><div class="text-xs text-slate-500 mb-2">112,120 labeled chest X-rays</div><span class="badge bg-green-500/10 text-green-400">Public domain</span></div>
+    <div class="card p-4"><div class="text-xs font-bold text-white mb-1">BraTS 2023</div><div class="text-xs text-slate-500 mb-2">Multi-modal brain MRI volumes</div><span class="badge bg-blue-500/10 text-blue-400">Free academic</span></div>
+    <div class="card p-4"><div class="text-xs font-bold text-white mb-1">RSNA Hemorrhage</div><div class="text-xs text-slate-500 mb-2">25,000 intracranial CT scans</div><span class="badge bg-green-500/10 text-green-400">Kaggle public</span></div>
+    <div class="card p-4"><div class="text-xs font-bold text-white mb-1">MIMIC-IV</div><div class="text-xs text-slate-500 mb-2">300,000+ clinical notes</div><span class="badge bg-yellow-500/10 text-yellow-400">Credentialed</span></div>
+    <div class="card p-4"><div class="text-xs font-bold text-white mb-1">INTERPOL DVI</div><div class="text-xs text-slate-500 mb-2">Disaster Victim Identification protocol</div><span class="badge bg-green-500/10 text-green-400">Public standard</span></div>
+    <div class="card p-4"><div class="text-xs font-bold text-white mb-1">EEG-ImageNet</div><div class="text-xs text-slate-500 mb-2">EEG and visual stimulus pairs</div><span class="badge bg-purple-500/10 text-purple-400">Research</span></div>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     WHAT WE DO NOT DO
-═══════════════════════════════════════════════ -->
+<!-- DATA COLLECTION & PRIVACY -->
 <section class="py-20">
-  <div class="warn-box p-8">
-    <div class="mb-3">
-      <span class="badge bg-red-500/15 text-red-400 border border-red-500/25">Hard Limits</span>
-    </div>
-    <h2 class="text-2xl font-black text-white mb-2">What this system does not do</h2>
-    <p class="text-slate-400 text-sm mb-8">These are not caveats. They are absolute boundaries built into the design of every module.</p>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      <div class="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3">
-        <span class="text-red-400 text-base shrink-0">✗</span>
-        <span class="text-sm text-slate-300">Determine cause of death</span>
-      </div>
-      <div class="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3">
-        <span class="text-red-400 text-base shrink-0">✗</span>
-        <span class="text-sm text-slate-300">Replace forensic pathologists</span>
-      </div>
-      <div class="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3">
-        <span class="text-red-400 text-base shrink-0">✗</span>
-        <span class="text-sm text-slate-300">Provide legal decisions or evidence</span>
-      </div>
-      <div class="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3">
-        <span class="text-red-400 text-base shrink-0">✗</span>
-        <span class="text-sm text-slate-300">Provide medical diagnosis</span>
-      </div>
-      <div class="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3">
-        <span class="text-red-400 text-base shrink-0">✗</span>
-        <span class="text-sm text-slate-300">Guarantee accuracy of findings</span>
-      </div>
-      <div class="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3">
-        <span class="text-red-400 text-base shrink-0">✗</span>
-        <span class="text-sm text-slate-300">Support automated final decisions</span>
-      </div>
-    </div>
+  <div class="mb-3"><span class="badge bg-green-500/10 text-green-400 border border-green-500/20">Privacy</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Data collection &amp; privacy</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10">The system processes only what the investigator explicitly provides. Nothing is collected, tracked, or retained beyond active processing.</p>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="card p-5"><div class="text-green-400 text-lg mb-2">🔒</div><div class="text-sm font-bold text-white mb-1">User-provided input only</div><div class="text-xs text-slate-400">The system processes only what the investigator explicitly uploads or enters. No automatic or passive data acquisition.</div></div>
+    <div class="card p-5"><div class="text-green-400 text-lg mb-2">📵</div><div class="text-sm font-bold text-white mb-1">No background monitoring</div><div class="text-xs text-slate-400">No scraping, no session recording, no behavioral analytics, and no background data collection at the application layer.</div></div>
+    <div class="card p-5"><div class="text-green-400 text-lg mb-2">🗑</div><div class="text-sm font-bold text-white mb-1">No long-term storage</div><div class="text-xs text-slate-400">Uploaded images and case content are not retained after the session ends. No cloud database. No file persistence beyond the local session.</div></div>
+    <div class="card p-5"><div class="text-green-400 text-lg mb-2">👤</div><div class="text-sm font-bold text-white mb-1">No personal data stored</div><div class="text-xs text-slate-400">No patient identifiers, biometric data, or case metadata is stored by the application itself.</div></div>
+    <div class="card p-5"><div class="text-green-400 text-lg mb-2">📤</div><div class="text-sm font-bold text-white mb-1">Third-party inference</div><div class="text-xs text-slate-400">Inputs are sent to Google Gemini API. Review Google's API data handling policies for applicable protections and terms.</div></div>
+    <div class="card p-5"><div class="text-green-400 text-lg mb-2">⚖️</div><div class="text-sm font-bold text-white mb-1">User responsibility</div><div class="text-xs text-slate-400">The operator is responsible for ensuring that data submitted to the system is used lawfully and with appropriate authorisation.</div></div>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     TARGET AUDIENCE
-═══════════════════════════════════════════════ -->
+<!-- TARGET USERS -->
 <section class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Audience</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Who this is built for</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10">These users share a common need: fast first-pass forensic screening when specialist access is delayed, unavailable, or too expensive.</p>
-
-  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
-    <div class="card p-4 text-center">
-      <div class="text-2xl mb-2">🔍</div>
-      <div class="text-xs font-bold text-white">Field Investigators</div>
-      <div class="text-xs text-slate-500 mt-1">On-scene, time-critical triage</div>
-    </div>
-    <div class="card p-4 text-center">
-      <div class="text-2xl mb-2">🚔</div>
-      <div class="text-xs font-bold text-white">Law Enforcement</div>
-      <div class="text-xs text-slate-500 mt-1">Case prioritization and escalation</div>
-    </div>
-    <div class="card p-4 text-center">
-      <div class="text-2xl mb-2">🧬</div>
-      <div class="text-xs font-bold text-white">Forensic Analysts</div>
-      <div class="text-xs text-slate-500 mt-1">Pre-autopsy structured screening</div>
-    </div>
-    <div class="card p-4 text-center">
-      <div class="text-2xl mb-2">🆘</div>
-      <div class="text-xs font-bold text-white">Disaster Response</div>
-      <div class="text-xs text-slate-500 mt-1">Mass casualty triage support</div>
-    </div>
-    <div class="card p-4 text-center">
-      <div class="text-2xl mb-2">🌍</div>
-      <div class="text-xs font-bold text-white">Low-Resource Systems</div>
-      <div class="text-xs text-slate-500 mt-1">No specialist infrastructure required</div>
-    </div>
-    <div class="card p-4 text-center">
-      <div class="text-2xl mb-2">🏆</div>
-      <div class="text-xs font-bold text-white">Research & Evaluation</div>
-      <div class="text-xs text-slate-500 mt-1">Hackathon judges and reviewers</div>
-    </div>
+  <div class="mb-3"><span class="badge bg-blue-500/10 text-blue-400 border border-blue-500/20">Audience</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Target users</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10">These users share a common need: fast first-pass forensic screening when specialist access is delayed, unavailable, or cost-prohibitive.</p>
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div class="card p-4 text-center"><div class="text-2xl mb-2">🔍</div><div class="text-xs font-bold text-white">Field Investigators</div><div class="text-xs text-slate-500 mt-1">On-scene triage</div></div>
+    <div class="card p-4 text-center"><div class="text-2xl mb-2">🚔</div><div class="text-xs font-bold text-white">Law Enforcement</div><div class="text-xs text-slate-500 mt-1">Case prioritisation</div></div>
+    <div class="card p-4 text-center"><div class="text-2xl mb-2">🧬</div><div class="text-xs font-bold text-white">Forensic Analysts</div><div class="text-xs text-slate-500 mt-1">Pre-autopsy screening</div></div>
+    <div class="card p-4 text-center"><div class="text-2xl mb-2">🆘</div><div class="text-xs font-bold text-white">Disaster Response</div><div class="text-xs text-slate-500 mt-1">Mass casualty triage</div></div>
+    <div class="card p-4 text-center"><div class="text-2xl mb-2">🌍</div><div class="text-xs font-bold text-white">Low-Resource Systems</div><div class="text-xs text-slate-500 mt-1">No specialist required</div></div>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     IMPACT + MARKET GAP
-═══════════════════════════════════════════════ -->
+<!-- LIMITATIONS -->
 <section class="py-20">
-  <div class="grid sm:grid-cols-2 gap-10">
-    <div>
-      <div class="mb-3">
-        <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Impact</span>
-      </div>
-      <h2 class="text-xl sm:text-2xl font-black text-white mb-4">What this changes</h2>
-      <ul class="space-y-3">
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-cyan-400 mt-0.5 shrink-0">→</span>Faster triage: 60-second screening vs. days of wait time</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-cyan-400 mt-0.5 shrink-0">→</span>Better prioritization: severity ratings guide which cases escalate first</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-cyan-400 mt-0.5 shrink-0">→</span>Reduced backlog pressure on specialist pathologists</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-cyan-400 mt-0.5 shrink-0">→</span>Support for low-resource regions with no forensic infrastructure</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-cyan-400 mt-0.5 shrink-0">→</span>Structured, consistent investigator reporting across jurisdictions</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-cyan-400 mt-0.5 shrink-0">→</span>Multi-modal: covers imaging, toxicology, and trauma in one workflow</li>
-      </ul>
-    </div>
-    <div>
-      <div class="mb-3">
-        <span class="badge bg-purple-500/10 text-purple-400 border border-purple-500/20">Market Gap</span>
-      </div>
-      <h2 class="text-xl sm:text-2xl font-black text-white mb-4">The gap this fills</h2>
-      <ul class="space-y-3">
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-purple-400 mt-0.5 shrink-0">→</span>Current forensic workflows are slow, siloed, and fragmented across tools</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-purple-400 mt-0.5 shrink-0">→</span>Imaging, toxicology, and trauma review have no unified access point</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-purple-400 mt-0.5 shrink-0">→</span>Existing medical AI tools are built for clinicians, not field investigators</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-purple-400 mt-0.5 shrink-0">→</span>No lightweight, accessible multi-modal forensic triage tool exists</li>
-        <li class="flex items-start gap-3 text-xs text-slate-400"><span class="text-purple-400 mt-0.5 shrink-0">→</span>Tools designed for developed-world clinical settings are undeployable in field environments with poor connectivity</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════════
-     LIMITATIONS
-═══════════════════════════════════════════════ -->
-<section class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Limitations</span>
-  </div>
+  <div class="mb-3"><span class="badge bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Limitations</span></div>
   <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Known limitations</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10">These are honest constraints the team identified during development. They are documented here, not hidden.</p>
-
+  <p class="text-slate-400 text-sm max-w-2xl mb-10">These constraints are documented clearly and are not treated as edge cases.</p>
   <div class="grid sm:grid-cols-2 gap-3">
-    <div class="flex items-start gap-3 card p-4">
-      <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
-      <div class="text-xs text-slate-400"><strong class="text-white">Not trained on forensic data.</strong> Uses general multimodal AI capabilities via API. Not fine-tuned for forensic-specific cases.</div>
-    </div>
-    <div class="flex items-start gap-3 card p-4">
-      <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
-      <div class="text-xs text-slate-400"><strong class="text-white">Input quality dependency.</strong> Low-resolution, blurry, or poorly lit images directly reduce the reliability and confidence of findings.</div>
-    </div>
-    <div class="flex items-start gap-3 card p-4">
-      <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
-      <div class="text-xs text-slate-400"><strong class="text-white">AI can miss findings.</strong> The model may fail to detect subtle anomalies, particularly findings that require specialist clinical training to identify.</div>
-    </div>
-    <div class="flex items-start gap-3 card p-4">
-      <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
-      <div class="text-xs text-slate-400"><strong class="text-white">Toxicology completeness.</strong> Output quality depends entirely on the completeness and clarity of the submitted lab report text.</div>
-    </div>
-    <div class="flex items-start gap-3 card p-4">
-      <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
-      <div class="text-xs text-slate-400"><strong class="text-white">Deep Brain Screening is conceptual.</strong> This module performs structural MRI/CT analysis only and is not a clinically validated neuro-forensic tool.</div>
-    </div>
-    <div class="flex items-start gap-3 card p-4">
-      <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
-      <div class="text-xs text-slate-400"><strong class="text-white">Expert validation is mandatory.</strong> All outputs are screening-level only. No report should be acted upon without qualified forensic specialist review.</div>
-    </div>
+    <div class="flex items-start gap-3 card p-4"><span class="text-yellow-400 shrink-0 mt-0.5">⚠</span><div class="text-xs text-slate-400"><strong class="text-white">Not diagnostic.</strong> The system performs screening-level pattern recognition. It does not provide clinical diagnoses or determine cause of death.</div></div>
+    <div class="flex items-start gap-3 card p-4"><span class="text-yellow-400 shrink-0 mt-0.5">⚠</span><div class="text-xs text-slate-400"><strong class="text-white">Not legally authoritative.</strong> Outputs carry no legal weight and cannot be submitted as legal evidence in any jurisdiction.</div></div>
+    <div class="flex items-start gap-3 card p-4"><span class="text-yellow-400 shrink-0 mt-0.5">⚠</span><div class="text-xs text-slate-400"><strong class="text-white">Input quality dependency.</strong> Low-resolution or poorly captured images directly reduce the reliability and confidence of findings.</div></div>
+    <div class="flex items-start gap-3 card p-4"><span class="text-yellow-400 shrink-0 mt-0.5">⚠</span><div class="text-xs text-slate-400"><strong class="text-white">AI may miss findings.</strong> The model may fail to detect subtle anomalies that require specialist clinical expertise to identify.</div></div>
+    <div class="flex items-start gap-3 card p-4"><span class="text-yellow-400 shrink-0 mt-0.5">⚠</span><div class="text-xs text-slate-400"><strong class="text-white">Toxicology completeness.</strong> Analysis quality depends entirely on the completeness and formatting of the submitted lab report.</div></div>
+    <div class="flex items-start gap-3 card p-4"><span class="text-yellow-400 shrink-0 mt-0.5">⚠</span><div class="text-xs text-slate-400"><strong class="text-white">Expert validation mandatory.</strong> All outputs are screening-level. No report should influence a decision without qualified forensic specialist review.</div></div>
   </div>
 </section>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     ETHICS
-═══════════════════════════════════════════════ -->
+<!-- ETHICS -->
 <section id="ethics" class="py-20">
-  <div class="mb-3">
-    <span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Ethics</span>
-  </div>
-  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Ethics & safety framework</h2>
-  <p class="text-slate-400 text-sm max-w-2xl mb-10">Every design decision in this system prioritises safety. These constraints are not optional — they are enforced at the prompt level for every module, every run.</p>
-
+  <div class="mb-3"><span class="badge bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Ethics &amp; Safety</span></div>
+  <h2 class="text-2xl sm:text-3xl font-black text-white mb-3">Ethics &amp; safety framework</h2>
+  <p class="text-slate-400 text-sm max-w-2xl mb-10">These constraints are enforced at the system prompt level for every module and every inference call. They are not advisory — they are architectural.</p>
   <div class="grid sm:grid-cols-2 gap-6 mb-8">
-    <div class="space-y-3">
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Built-in prompt constraints</div>
+    <div>
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Prompt-level constraints</div>
       <div class="space-y-2 text-xs text-slate-400">
-        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI is prohibited from naming specific diseases or syndromes</div>
-        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI is prohibited from stating or implying cause of death</div>
-        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI is prohibited from inventing patient demographics or identifiers</div>
-        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI must only describe what is visually or textually observable</div>
-        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI must always recommend expert review — no exceptions</div>
-        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>Expert-review disclaimer is required in every JSON response</div>
+        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI prohibited from naming specific diseases or syndromes</div>
+        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI prohibited from stating or implying cause of death</div>
+        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI prohibited from inventing patient demographics or identifiers</div>
+        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>AI must describe only what is visually or textually observable</div>
+        <div class="flex gap-2"><span class="text-cyan-400 shrink-0">→</span>Expert-review disclaimer required in every single JSON response</div>
       </div>
     </div>
-    <div class="space-y-3">
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Output integrity rules</div>
+    <div>
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Output integrity rules</div>
       <div class="space-y-2 text-xs text-slate-400">
-        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>No automated final decisions — human must always review</div>
+        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>No automated final decisions — human expert must review all outputs</div>
         <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>No legal conclusions of any kind</div>
-        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>No clinical diagnoses</div>
-        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>No certainty claims — all language is hedged and qualified</div>
-        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Fallback result shown on API failure — app never crashes silently</div>
-        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Input-type mismatch is flagged, not silently processed</div>
+        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>No medical diagnoses</div>
+        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>All language hedged: "consistent with", "suggests", "warrants review"</div>
+        <div class="flex gap-2"><span class="text-blue-400 shrink-0">→</span>Graceful fallback on API failure — no silent errors</div>
       </div>
     </div>
   </div>
 
-  <!-- Ethical disclaimer box -->
-  <div class="ethical-box p-6 text-center">
+  <!-- Hard limits -->
+  <div class="warn-box p-6 mb-8">
+    <div class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-4">This system does not</div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div class="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3"><span class="text-red-400 shrink-0">✗</span><span class="text-sm text-slate-300">Determine cause of death</span></div>
+      <div class="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3"><span class="text-red-400 shrink-0">✗</span><span class="text-sm text-slate-300">Replace forensic pathologists</span></div>
+      <div class="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3"><span class="text-red-400 shrink-0">✗</span><span class="text-sm text-slate-300">Generate legal evidence</span></div>
+      <div class="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3"><span class="text-red-400 shrink-0">✗</span><span class="text-sm text-slate-300">Provide medical diagnosis</span></div>
+      <div class="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3"><span class="text-red-400 shrink-0">✗</span><span class="text-sm text-slate-300">Guarantee accuracy of findings</span></div>
+      <div class="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3"><span class="text-red-400 shrink-0">✗</span><span class="text-sm text-slate-300">Support automated final decisions</span></div>
+    </div>
+  </div>
+
+  <!-- Disclaimer box -->
+  <div class="ethics-box p-6 text-center">
     <div class="text-yellow-400 text-2xl mb-3">⚠️</div>
     <p class="text-sm font-semibold text-yellow-200 max-w-2xl mx-auto leading-relaxed">
-      AI screening only. Requires expert validation. Forensic AI is not a clinical diagnostic tool, not a legal evidence generator, and not a replacement for qualified forensic specialists.
+      AI screening only. NeuroForensic AI requires expert validation and must not be used as a standalone medical, legal, or cause-of-death decision system.
     </p>
   </div>
 </section>
 
 </main>
 
-<div class="section-divider"></div>
+<div class="divider"></div>
 
-<!-- ═══════════════════════════════════════════════
-     FOOTER
-═══════════════════════════════════════════════ -->
+<!-- FOOTER -->
 <footer class="border-t border-slate-800 py-14">
   <div class="max-w-6xl mx-auto px-4 sm:px-6">
     <div class="grid sm:grid-cols-3 gap-8 mb-10">
       <div>
-        <div class="text-base font-black text-white mb-2">🧠 Forensic AI</div>
-        <p class="text-xs text-slate-500 leading-relaxed">Pre-Autopsy Intelligence System. Multi-modal forensic screening for investigators. Decision-support only.</p>
-        <div class="mt-3 text-xs text-slate-600">Author: <span class="text-slate-400">Aman</span></div>
-        <div class="text-xs text-slate-600">License: <span class="text-slate-400">Demo / Research Prototype</span></div>
+        <div class="text-base font-black text-white mb-2">🧠 NeuroForensic AI</div>
+        <p class="text-xs text-slate-500 leading-relaxed mb-4">Multi-modal forensic screening system for investigators. Decision-support only. Expert review required for all outputs.</p>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            <span class="text-slate-600">Project Idea &amp; Owner:</span>
+            <a href="https://github.com/shreyabalki" target="_blank" class="text-cyan-400 hover:text-cyan-300 transition-colors">github.com/shreyabalki</a>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            <span class="text-slate-600">Contributor:</span>
+            <a href="https://github.com/Srimonchaari" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">github.com/Srimonchaari</a>
+          </div>
+        </div>
       </div>
       <div>
-        <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Links</div>
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Links</div>
         <div class="space-y-2">
-          <a href="https://github.com/Srimonchaari/neuroforensic-ai" target="_blank" class="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors">
+          <a href="https://github.com/shreyabalki/neuroforensic-ai" target="_blank" class="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors">
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-            View Source on GitHub
+            GitHub Repository
           </a>
-          <a href="https://github.com/Srimonchaari/neuroforensic-ai" target="_blank" class="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors">
-            <span class="w-3.5 h-3.5 text-center">▶</span>
-            Run Demo
+          <a href="https://github.com/shreyabalki/neuroforensic-ai" target="_blank" class="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors">
+            <span>▶</span> Run Application
           </a>
         </div>
       </div>
       <div>
-        <div class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Stack</div>
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Stack</div>
         <div class="flex flex-wrap gap-2">
           <span class="badge bg-slate-800 text-slate-400 border border-slate-700">Python</span>
           <span class="badge bg-slate-800 text-slate-400 border border-slate-700">Streamlit</span>
           <span class="badge bg-slate-800 text-slate-400 border border-slate-700">Gemini Flash</span>
           <span class="badge bg-slate-800 text-slate-400 border border-slate-700">Pillow</span>
-          <span class="badge bg-slate-800 text-slate-400 border border-slate-700">Healthcare Track</span>
         </div>
       </div>
     </div>
-
     <div class="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
       <p class="text-xs text-slate-600 text-center sm:text-left">
-        For demonstration and research purposes only. No real patient data is stored by the app.
+        AI screening only. Requires expert validation. Not a medical, legal, or cause-of-death decision system. No real patient data stored.
       </p>
-      <p class="text-xs text-slate-700">
-        © 2025 Forensic AI — Aman
-      </p>
+      <p class="text-xs text-slate-700">© 2025 NeuroForensic AI</p>
     </div>
   </div>
 </footer>

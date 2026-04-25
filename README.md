@@ -1,244 +1,254 @@
 # NeuroForensic AI
-### Multi-Modal Death Investigation Assistant
-
-> **Hackathon Track: Build with Healthcare**  
-> AI-powered forensic screening for investigators — structured reports in under 60 seconds.
+### Multi-modal forensic screening assistant for investigators
 
 ---
 
-## The Problem
+**Project Idea & Owner:** [shreyabalki](https://github.com/shreyabalki)  
+**Contributor & Collaborator:** [Srimonchaari](https://github.com/Srimonchaari)
 
-| Statistic | Scale |
+---
+
+## Overview
+
+NeuroForensic AI is a multi-modal forensic screening system that helps investigators perform rapid, structured first-pass analysis of forensic evidence. It accepts medical scan images, trauma photographs, and toxicology text reports, and returns structured JSON reports with findings, severity classification, and recommended next steps.
+
+The system is designed for decision support only. It is not a diagnostic tool, not a legal evidence system, and does not determine cause of death. All outputs require review and validation by a qualified forensic specialist before any action is taken.
+
+---
+
+## Problem
+
+| Challenge | Impact |
 |---|---|
-| Deaths uninvestigated globally per year | **2,000,000+** |
-| Forensic pathologists per 100 million people | **~150** |
-| Average wait time for specialist review | **Days to weeks** |
-| Investigators with access to forensic AI tools | **Near zero** |
-
-Investigators in low-resource settings have no fast, unified tool to get a structured first-look across body evidence, brain scans, and toxicology simultaneously. Cases go cold. Families get no answers.
-
----
-
-## The Solution
-
-**NeuroForensic AI** gives any investigator, anywhere, a structured forensic screening report in under **60 seconds** — from a laptop, no specialist required on-site.
-
-- Upload a medical scan, crime scene photo, or paste a lab report
-- AI analyzes it against real public clinical datasets
-- Returns a structured JSON report with findings, severity, and recommended actions
-- All outputs include mandatory expert-review disclaimers
+| Severe forensic expert shortage | ~150 forensic pathologists per 100 million people globally |
+| Delayed case review | Days to weeks of wait time for specialist analysis; evidence degrades |
+| Fragmented tooling | Medical imaging, toxicology, and trauma review handled by separate, disconnected tools |
+| Low-resource access gap | Investigators in under-resourced regions have no accessible, lightweight forensic triage tools |
+| Uninvestigated deaths | Over 2 million deaths go without forensic review annually |
 
 ---
 
-## 6 Forensic Modules
+## Solution
 
-### 🫁 Module 1 — Chest X-ray
-- **Detects:** Lung opacity, pleural fluid, pneumothorax, rib fractures, mediastinal widening, structural asymmetry
-- **Dataset:** NIH ChestX-ray14 (112,000 labeled chest X-rays, public domain)
-- **Input:** JPEG / PNG image
-- **Method:** Gemini Flash vision analysis with forensic radiology prompt
+NeuroForensic AI addresses this gap with:
 
-### 🧠 Module 2 — Brain MRI / CT
-- **Detects:** Abnormal masses, hemorrhage, edema, midline shift, hemispheric asymmetry, density irregularities
-- **Dataset:** BraTS 2023 (multi-modal brain MRI, Synapse public access)
-- **Input:** JPEG / PNG image
-- **Method:** Gemini Flash vision with neuroradiology forensic prompt
-
-### 🦴 Module 3 — Full Body CT
-- **Detects:** Fractures, internal bleeding, organ density anomalies, fluid accumulation, soft tissue disruption
-- **Dataset:** RSNA Intracranial Hemorrhage Detection (25,000 CT scans, Kaggle public)
-- **Input:** JPEG / PNG image
-- **Method:** Gemini Flash vision with trauma radiology prompt
-
-### 🧪 Module 4 — Toxicology Report
-- **Detects:** Substances above reference thresholds, alcohol levels, opioids, benzodiazepines, stimulants, poisons, poly-substance interactions, overdose risk markers
-- **Dataset:** MIMIC-IV Clinical Notes (PhysioNet, free credentialed access)
-- **Input:** Plain text `.txt` file or pasted lab report text
-- **Method:** Gemini Flash NLP on unstructured lab report text
-
-### 📷 Module 5 — External Trauma Photo
-- **Detects:** Ligature marks (location, angle, width, continuity), petechiae, bruise patterns, lacerations, burns, impact wounds, positional lividity
-- **Protocol:** INTERPOL DVI (Disaster Victim Identification) standard language
-- **Input:** Scene or body photograph (JPEG / PNG)
-- **Method:** Gemini Flash vision with INTERPOL-compliant forensic prompt
-
-### ⚡ Module 6 — Brain Pattern Analysis
-- **Detects:** Visual cortex (occipital) anomalies, hippocampal asymmetry, diffuse axonal injury indicators, deep brain hemorrhagic patterns, watershed zone changes, brainstem anomalies
-- **Scientific Basis:** EEG-ImageNet research (Spampinato et al.) — post-mortem neuroimaging reveals structural residue of pre-death brain state
-- **Dataset:** BraTS 2023 + EEG-ImageNet conceptual grounding
-- **Input:** Brain MRI / CT image
-- **Method:** Specialized neuroscience prompt with pattern-specific analysis
+- **Multi-modal input support** — accepts medical images (JPEG/PNG) and unstructured text (lab reports)
+- **Six independent forensic modules** — each with a tailored system prompt, schema, and accepted input type
+- **Structured output format** — consistent JSON reports with severity, findings, confidence, and investigator actions
+- **Fast screening** — full analysis in under 60 seconds per case
+- **Consistent reporting** — standardised output structure across all modules and investigators
+- **Mandatory expert review** — every report includes a built-in disclaimer and escalation guidance
 
 ---
 
-## Report Output Format
+## How It Works
 
-Every module returns a structured JSON report with these fields:
-
-```json
-{
-  "module": "Chest X-ray",
-  "case_summary": "Diffuse bilateral opacities with cardiomegaly.",
-  "anomalies": "Yes",
-  "confidence": "Medium",
-  "suspected_region": "Bilateral lung fields / cardiac silhouette",
-  "key_findings": [
-    "Increased opacity in bilateral lower lobes",
-    "Cardiomegaly with cardiothoracic ratio > 0.5",
-    "No pneumothorax identified"
-  ],
-  "medical_interpretation": "Findings consistent with pulmonary edema pattern.",
-  "forensic_relevance": "Bilateral opacities may warrant toxicological correlation.",
-  "differential_considerations": ["Pulmonary edema", "Bilateral pneumonia"],
-  "recommended_next_steps": ["Correlate with toxicology report", "Refer to forensic pathologist"],
-  "investigator_action": "Escalate to forensic pathologist. Priority: High.",
-  "severity": "Suspicious",
-  "limitations": "AI screening only — image quality affects confidence.",
-  "dataset_source": "NIH ChestX-ray14",
-  "disclaimer": "Demo only. Not clinical or legal advice. Expert review required.",
-  "visual_annotations": [
-    {"label": "Bilateral opacity", "x": 0.5, "y": 0.6, "w": 0.6, "h": 0.3}
-  ]
-}
+```
+1. Investigator selects a forensic module
+        ↓
+2. Uploads an image (JPEG/PNG) or pastes toxicology text
+        ↓
+3. Input is preprocessed
+   - Images: resized to 512px max, compressed to JPEG 80%, base64-encoded
+   - Text: passed directly as user-provided content
+        ↓
+4. Gemini Flash API performs multi-modal inference
+   - Module-specific system prompt applied
+   - Strict JSON output schema enforced
+   - Hallucination-reduction constraints active
+        ↓
+5. System parses and validates the JSON response
+   - Schema validation applied
+   - Graceful fallback returned on parse failure
+        ↓
+6. UI renders structured report
+   - Severity badge (Normal / Suspicious / Critical)
+   - Key findings, interpretation, forensic relevance
+   - Recommended next steps and investigator action
+   - AI-annotated image with approximate bounding boxes
+        ↓
+7. Investigator reviews and escalates based on findings
 ```
 
 ---
 
-## Severity Classification
+## System Architecture
 
-| Level | Meaning | Action |
-|---|---|---|
-| **Normal** | No anomalies detected within observable range | Document and close or correlate with other modules |
-| **Suspicious** | Findings warrant specialist review | Escalate to forensic pathologist — non-urgent |
-| **Critical** | Urgent findings requiring immediate review | Immediate expert consultation required |
-
----
-
-## How It Works — Pipeline
-
-```
-Investigator Input
-       │
-       ▼
-┌─────────────────────────────────┐
-│   Module Selection              │
-│   (Chest / Brain / Body /       │
-│    Toxicology / Trauma / Neuro) │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│   Input Processing              │
-│   Image → resize + base64       │
-│   Text  → direct pass-through   │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│   Gemini 2.5 Flash              │
-│   (vision + text)               │
-│   Module-specific system prompt │
-│   Returns: strict JSON only     │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│   JSON Validation + Parsing     │
-│   Fallback if API unavailable   │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│   PIL Image Annotation          │
-│   Bounding boxes on findings    │
-│   Original vs AI-marked view    │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│   Structured Report Card        │
-│   Severity badge                │
-│   Stat cards + Region           │
-│   Findings / Interpretation     │
-│   Differentials / Next Steps    │
-│   Investigator Action           │
-│   Disclaimer (always present)   │
-└─────────────────────────────────┘
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
+| Component | Technology |
 |---|---|
-| **UI Framework** | Streamlit (Python) |
-| **AI Provider** | Google Gemini 2.5 Flash (vision + text) |
-| **Image Processing** | Pillow (PIL) — annotation + compression |
-| **HTTP Client** | Requests |
-| **Environment** | Python-dotenv |
-| **Language** | Python 3.10+ |
+| Application framework | Python 3.10+ with Streamlit |
+| AI inference | Google Gemini 2.5 Flash (multimodal API) |
+| Image preprocessing | Pillow (PIL) — resize, compress, encode |
+| Annotation | Pillow ImageDraw — bounding boxes, labels |
+| HTTP client | requests |
+| Environment config | python-dotenv |
+| Session persistence | JSON file (analysis_history.json) |
+| Deployment | Streamlit Cloud or any Python host |
 
-No heavyweight ML frameworks (PyTorch, TensorFlow) required at runtime. The app uses Gemini's API for all inference — lightweight deployment.
+**No custom ML model is trained. No GPU infrastructure is required. All inference is performed through the Google Gemini API.**
 
 ---
 
-## Dataset References
+## Modules
 
-| Dataset | Source | Size | License |
+### 🫁 Chest X-ray
+- **Input:** JPEG / PNG image
+- **Screens for:** Lung opacity, pleural fluid, pneumothorax, rib fracture patterns, mediastinal widening, structural asymmetry
+- **Reference source:** NIH ChestX-ray14 (112,120 labeled chest X-rays)
+
+### 🧠 Brain MRI / CT
+- **Input:** JPEG / PNG image
+- **Screens for:** Abnormal masses, hemorrhage, edema, hemispheric asymmetry, midline shift indicators, density irregularities
+- **Reference source:** BraTS 2023 (multi-modal brain MRI dataset)
+
+### 🦴 Full Body CT
+- **Input:** JPEG / PNG image
+- **Screens for:** Fractures, internal bleeding indicators, organ density anomalies, soft tissue disruption, trauma patterns
+- **Reference source:** RSNA Intracranial Hemorrhage (25,000 CT scans)
+
+### 🧪 Toxicology Report
+- **Input:** Plain text or `.txt` file
+- **Screens for:** Substances above reference thresholds, alcohol markers, opioids, benzodiazepines, stimulants, overdose risk indicators, poly-substance interactions
+- **Reference source:** MIMIC-IV Clinical Notes (PhysioNet)
+
+### 📷 External Trauma
+- **Input:** JPEG / PNG photograph
+- **Screens for:** Visible injury patterns, bruising distribution, lacerations, burns, ligature-like marks, petechiae indicators
+- **Protocol reference:** INTERPOL DVI (Disaster Victim Identification) standard
+
+### ⚡ Deep Brain Screening
+- **Input:** Brain MRI or CT image
+- **Screens for:** Structural asymmetry, deep-region irregularities, white matter signal changes, occipital and parietal anomalies
+- **Reference source:** BraTS 2023
+
+---
+
+## Model Strategy
+
+This system does **not** train any custom deep learning model. There are no model weights, no training pipelines, and no GPU requirements.
+
+All AI inference is performed through the **Google Gemini 2.5 Flash API** using a pre-trained multimodal model. Output behaviour is controlled entirely through:
+
+- **Module-specific system prompts** — forensic domain instructions per module
+- **Strict JSON output schemas** — enforced 14-field report structure
+- **Hallucination-reduction rules** — prohibit disease naming, cause-of-death claims, and fabricated patient details
+- **Mandatory disclaimer field** — expert-review requirement included in every response
+
+This approach allows rapid iteration, zero compute cost, and deployment on any machine with internet access.
+
+---
+
+## Data Sources
+
+| Dataset | Module | Scale | Access |
 |---|---|---|---|
-| NIH ChestX-ray14 | nihcc.app.box.com/v/ChestXray-NIHCC | 112,120 images | Public domain |
-| BraTS 2023 | synapse.org/#!Synapse:syn51156910 | Multi-modal MRI | Free academic |
-| RSNA Hemorrhage | kaggle.com/c/rsna-intracranial-hemorrhage-detection | 25,000 CT scans | Kaggle public |
-| MIMIC-IV | physionet.org/content/mimiciv | 300,000+ records | Credentialed |
-| EEG-ImageNet | github.com/perceivelab/eeg_visual_classification | EEG + visual | Research |
-| INTERPOL DVI | interpol.int/How-we-work/Forensics/DVI | Protocol standard | Public |
+| NIH ChestX-ray14 | Chest X-ray | 112,120 images | Public domain |
+| BraTS 2023 | Brain MRI / CT, Deep Brain | Multi-modal MRI | Free academic |
+| RSNA Hemorrhage | Full Body CT | 25,000 CT scans | Kaggle public |
+| MIMIC-IV | Toxicology | 300,000+ records | PhysioNet credentialed |
+| INTERPOL DVI | External Trauma | Protocol standard | Public standard |
+| EEG-ImageNet | Deep Brain | EEG + visual pairs | Research |
+
+> These sources are used for grounding, reference, prompt design, and expected output structure. They are **not** used to retrain a custom model. Only public or credentialed datasets are referenced. No private patient data is stored.
 
 ---
 
-## Quickstart
+## Data Collection & Processing
 
-### Prerequisites
-- Python 3.10+
-- Google Gemini API key (free at [aistudio.google.com](https://aistudio.google.com))
+- **User-provided input only** — the system processes only what the investigator explicitly uploads or enters
+- **No automatic data collection** — no scraping, no passive monitoring, no background tracking
+- **No long-term storage** — uploaded images and case content are not retained after the session ends
+- **No personal or biometric data stored** — no patient identifiers, demographics, or case metadata retained by the app
+- **Third-party inference** — inputs are sent to Google Gemini API; review Google's API data handling policies for applicable protections
 
-### Setup
+---
+
+## Output Format
+
+Every module returns a structured JSON response with the following fields:
+
+| Field | Description |
+|---|---|
+| `module` | Name of the forensic module used |
+| `case_summary` | One-sentence overview of key findings |
+| `findings` / `key_findings` | Array of 1–4 observable signals |
+| `severity` | `Normal`, `Suspicious`, or `Critical` |
+| `confidence` | `Low`, `Medium`, or `High` |
+| `suspected_region` | Specific anatomical area of concern |
+| `medical_interpretation` | Brief interpretation of findings |
+| `forensic_relevance` | Relevance to death investigation context |
+| `differential_considerations` | Possible alternative explanations |
+| `recommended_next_steps` | Actions for the investigator |
+| `investigator_action` | One-sentence escalation guidance |
+| `limitations` | Constraints applicable to this analysis |
+| `disclaimer` | Mandatory expert-review statement |
+| `visual_annotations` | Approximate bounding box coordinates |
+
+---
+
+## Target Users
+
+- **Field investigators** — on-scene, time-critical forensic triage
+- **Law enforcement teams** — structured case prioritization and escalation
+- **Forensic analysts** — pre-autopsy first-pass screening
+- **Disaster response teams** — multi-case triage support in mass casualty events
+- **Low-resource healthcare systems** — accessible screening without specialist infrastructure
+
+---
+
+## Limitations
+
+- The system is not a diagnostic tool and does not determine cause of death
+- Outputs are not legally authoritative and cannot be used as legal evidence
+- Input quality directly affects the reliability of findings — blurry or low-resolution images reduce confidence
+- The AI may miss or misinterpret subtle findings; specialist expertise cannot be replicated through prompt engineering
+- Toxicology analysis depends on the completeness and clarity of the submitted report
+- The Deep Brain Screening module performs structural image analysis only and is not a clinically validated neuro-forensic tool
+- Expert validation is mandatory before any output is acted upon
+
+---
+
+## Ethics & Safety
+
+- **No cause-of-death determination** — the system cannot and does not infer why someone died
+- **No medical diagnosis** — findings are observable signals, not clinical conclusions
+- **No legal conclusions** — outputs do not constitute evidence and carry no legal weight
+- **No automated final decisions** — a qualified human expert must review all outputs before any action is taken
+- **Cautious language enforced** — all outputs use hedged language: "consistent with", "suggests", "warrants review"
+- **Hallucination constraints** — prompts prohibit AI from naming diseases, inventing demographics, or claiming certainty
+
+---
+
+## Setup
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Srimonchaari/neuroforensic-ai.git
+git clone https://github.com/shreyabalki/neuroforensic-ai
 cd neuroforensic-ai
 
-# 2. Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate        # macOS / Linux
-venv\Scripts\activate           # Windows
+# 2. Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate       # macOS / Linux
+venv\Scripts\activate          # Windows
 
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure API key
+# 4. Configure your API key
 cp .env.example .env
 # Edit .env and set:
-# GEMINI_API_KEY=AIza...
+# GEMINI_API_KEY=your_key_here
 
-# 5. Download / create demo samples
+# 5. Download demo samples (optional)
 python download_samples.py
 
-# 6. Run the app
+# 6. Run the application
 streamlit run app.py
 ```
 
-Open **http://localhost:8501** in your browser.
+The app will be available at **http://localhost:8501**
 
-### Streamlit Cloud Deployment
-
-Add `GEMINI_API_KEY` to your app's **Secrets** in the Streamlit Cloud dashboard:
-
-```toml
-# .streamlit/secrets.toml
-GEMINI_API_KEY = "AIza..."
-```
+**Streamlit Cloud deployment:** Add `GEMINI_API_KEY` to your app's Secrets in the Streamlit Cloud dashboard.
 
 ---
 
@@ -246,17 +256,17 @@ GEMINI_API_KEY = "AIza..."
 
 ```
 neuroforensic-ai/
-├── app.py                  ← Main Streamlit application (all 6 modules)
-├── download_samples.py     ← Fetches demo images + creates tox text samples
-├── requirements.txt        ← Python dependencies
-├── .env.example            ← API key template
-├── CLAUDE.md               ← AI grounding document (hallucination prevention rules)
-├── README.md               ← This file
-├── PRESENTATION.html       ← PDF-ready presentation document
+├── app.py                    ← Main Streamlit application
+├── download_samples.py       ← Downloads and creates demo sample files
+├── requirements.txt          ← Python dependencies
+├── .env.example              ← API key configuration template
+├── analysis_history.json     ← Persistent session history (auto-generated)
+├── docs/
+│   └── index.html            ← Landing page (GitHub Pages)
 ├── agents/
-│   ├── forensic_agent.md   ← Per-module AI behavior and system prompt rules
-│   ├── output_agent.md     ← Report card rendering rules
-│   └── neuro_agent.md      ← Brain pattern module science and rules
+│   ├── forensic_agent.md     ← Per-module AI behaviour rules
+│   ├── output_agent.md       ← Report rendering rules
+│   └── neuro_agent.md        ← Brain module rules
 └── samples/
     ├── chest_normal.jpg
     ├── chest_suspicious.jpg
@@ -272,57 +282,6 @@ neuroforensic-ai/
 
 ---
 
-## Ethical Framework
+## Disclaimer
 
-This tool is a **decision-support prototype only.**
-
-| What it IS | What it is NOT |
-|---|---|
-| AI-powered forensic screening tool | Clinical diagnostic tool |
-| Decision-support for investigators | Legal evidence generator |
-| Grounded in public clinical datasets | Trained on private patient data |
-| INTERPOL DVI protocol-aligned | Cause-of-death determiner |
-| Expert-review disclaimer on every report | Replacement for forensic pathologists |
-
-**Hallucination prevention rules built into every prompt:**
-- Never name specific diseases or syndromes
-- Never state or imply cause of death
-- Never invent patient demographics
-- Never claim certainty — uses "consistent with", "suggests", "warrants review"
-- Always include expert-review disclaimer
-- Only describe what is visually or textually observable
-
----
-
-## Limitations
-
-- Image quality directly affects analysis confidence
-- AI vision is not trained on forensic images specifically — uses general medical vision capabilities
-- Toxicology analysis depends on report format and completeness
-- Brain Pattern Analysis module is conceptual — not a validated clinical tool
-- All outputs are screening-level only — not diagnostic
-- Free tier: 15 requests/minute, 1,500 requests/day (Gemini)
-
----
-
-## Future Scope
-
-- [ ] Fine-tuned forensic-specific vision model
-- [ ] Mobile app for on-scene field investigators
-- [ ] Real EEG hardware integration (BCI signal → image prediction)
-- [ ] Multi-case batch processing
-- [ ] INTERPOL DVI system integration
-- [ ] WHO Digital Health deployment partnership
-- [ ] Offline mode for low-connectivity environments
-- [ ] Voice-guided investigator workflow
-
----
-
-## Author
-
-**Aman** — Healthcare AI Hackathon  
-Built with Google Gemini Flash · Streamlit · Python · PIL
-
----
-
-*For demonstration purposes only. NeuroForensic AI does not replace qualified forensic pathologists. All outputs require expert validation before any action. No real patient data is used or stored.*
+> AI screening only. NeuroForensic AI requires expert validation and must not be used as a standalone medical, legal, or cause-of-death decision system.
