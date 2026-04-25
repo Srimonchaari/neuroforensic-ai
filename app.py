@@ -3,7 +3,7 @@ NeuroForensic AI — Multi-Modal Death Investigation Assistant
 ============================================================
 Author: Aman
 Track: Build with Healthcare
-AI Provider: OpenAI GPT-4o-mini (vision + text)
+AI Provider: Google Gemini 1.5 Flash (vision + text)
 
 Modules:
   1. Chest X-ray       — lung opacity, fluid, structural anomaly
@@ -18,28 +18,30 @@ Grounded by: CLAUDE.md, agents/forensic_agent.md,
 """
 
 import streamlit as st
-import openai
+import requests as http
 import base64
 import json
 import os
 import time
+import io
 from pathlib import Path
 from dotenv import load_dotenv
+from PIL import Image as PILImage
 
 load_dotenv()
 
 def _get_api_key() -> str | None:
-    """Read API key: Streamlit secrets → env var → sidebar input."""
+    """Read Gemini API key: Streamlit secrets → env var → sidebar input."""
     try:
-        key = st.secrets.get("OPENAI_API_KEY", "")
+        key = st.secrets.get("GEMINI_API_KEY", "")
         if key:
             return key
     except (AttributeError, FileNotFoundError):
         pass
-    env_key = os.getenv("OPENAI_API_KEY", "")
+    env_key = os.getenv("GEMINI_API_KEY", "")
     if env_key:
         return env_key
-    return st.session_state.get("openai_api_key", "") or None
+    return st.session_state.get("gemini_api_key", "") or None
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -49,8 +51,8 @@ st.set_page_config(
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MODEL             = "gpt-4o-mini"
-MAX_TOKENS        = 500
+MODEL             = "gemini-1.5-flash"
+MAX_OUTPUT_TOKENS = 500
 VALID_SEVERITIES  = ["Normal", "Suspicious", "Critical"]
 VALID_CONFIDENCES = ["Low", "Medium", "High"]
 
@@ -256,75 +258,105 @@ MODULE_META = {
 }
 
 # ── OpenAI Agents ─────────────────────────────────────────────────────────────
-def _call_with_retry(client: openai.OpenAI, **kwargs) -> str:
-    delays = [30, 60, 90]
-    for attempt, delay in enumerate(delays, 1):
-        try:
-            resp = client.chat.completions.create(**kwargs)
-            return resp.choices[0].message.content
-        except openai.RateLimitError:
-            if attempt == len(delays):
-                raise
-            st.toast(f"Rate limit hit — retrying in {delay}s… (attempt {attempt}/3)")
-            time.sleep(delay)
+MIN_CALL_INTERVAL = 5  # seconds — safe under 15 RPM (Gemini free tier)
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{MODEL}:generateContent"
+)
 
 
-def _compress_image(image_bytes: bytes, max_px: int = 512) -> tuple[bytes, str]:
-    """Resize to max_px on the longest side and return JPEG bytes + media type."""
-    from PIL import Image as PILImage
-    import io
+def _rate_limit_wait():
+    last = st.session_state.get("last_api_call_time", 0)
+    wait = MIN_CALL_INTERVAL - (time.time() - last)
+    if wait <= 0:
+        return
+    steps = int(wait * 10)
+    bar = st.progress(0.0, text=f"Ready in {int(wait)}s…")
+    for i in range(steps):
+        time.sleep(0.1)
+        bar.progress((i + 1) / steps, text=f"Ready in {max(0, int(wait - (i+1)*0.1))}s…")
+    bar.empty()
+
+
+def _gemini_post(payload: dict) -> str:
+    _rate_limit_wait()
+    st.session_state["last_api_call_time"] = time.time()
+    r = http.post(
+        GEMINI_URL,
+        params={"key": _get_api_key()},
+        json=payload,
+        timeout=30,
+    )
+    if r.status_code == 429:
+        st.warning("Rate limit hit — waiting 30s then retrying once…")
+        time.sleep(30)
+        st.session_state["last_api_call_time"] = time.time()
+        r = http.post(GEMINI_URL, params={"key": _get_api_key()}, json=payload, timeout=30)
+    if not r.ok:
+        raise RuntimeError(f"Gemini API error {r.status_code}: {r.text[:300]}")
+    candidates = r.json().get("candidates", [])
+    if not candidates:
+        raise RuntimeError("Gemini returned no candidates.")
+    return candidates[0]["content"]["parts"][0]["text"]
+
+
+def _compress_image(image_bytes: bytes, max_px: int = 512) -> tuple[str, str]:
+    """Returns (base64_string, mime_type) resized to max_px."""
     img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
     img.thumbnail((max_px, max_px), PILImage.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=80)
-    return buf.getvalue(), "image/jpeg"
+    return base64.b64encode(buf.getvalue()).decode(), "image/jpeg"
+
+
+def _build_payload(system_prompt: str, parts: list) -> dict:
+    return {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": [{"parts": parts}],
+        "generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.1},
+    }
 
 
 def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
-    client = openai.OpenAI(api_key=_get_api_key())
-    image_bytes, media_type = _compress_image(image_bytes)
-    b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-    raw = _call_with_retry(
-        client,
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPTS[module]},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{b64}", "detail": "low"}},
-                    {"type": "text", "text": "Return JSON only."},
-                ],
-            },
+    b64, mime = _compress_image(image_bytes)
+    payload = _build_payload(
+        SYSTEM_PROMPTS[module],
+        [
+            {"inline_data": {"mime_type": mime, "data": b64}},
+            {"text": "Return JSON only."},
         ],
     )
-    return _parse(raw)
+    return _parse(_gemini_post(payload))
 
 
 def run_text_agent(report_text: str, module: str) -> dict:
-    client = openai.OpenAI(api_key=_get_api_key())
-    raw = _call_with_retry(
-        client,
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPTS[module]},
-            {"role": "user", "content": f"Analyze:\n\n{report_text}\n\nReturn JSON only."},
-        ],
+    payload = _build_payload(
+        SYSTEM_PROMPTS[module],
+        [{"text": f"Analyze:\n\n{report_text}\n\nReturn JSON only."}],
     )
-    return _parse(raw)
+    return _parse(_gemini_post(payload))
 
 
 def _parse(raw: str) -> dict:
-    """Strips markdown fences and parses JSON."""
+    import re
     raw = raw.strip()
-    if raw.startswith("```"):
-        parts = raw.split("```")
-        raw = parts[1] if len(parts) > 1 else raw
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    # Strip markdown fences (```json ... ``` or ``` ... ```)
+    fence = re.search(r"```(?:json)?\s*(.*?)\s*```", raw, re.DOTALL)
+    if fence:
+        raw = fence.group(1)
+    # Try direct parse first
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+    # Fall back: extract first {...} block from anywhere in the text
+    obj = re.search(r"\{.*\}", raw, re.DOTALL)
+    if obj:
+        try:
+            return json.loads(obj.group())
+        except json.JSONDecodeError:
+            pass
+    raise json.JSONDecodeError("No valid JSON found in model response", raw, 0)
 
 
 # ── Validation (from output_agent.md) ────────────────────────────────────────
@@ -394,27 +426,41 @@ with st.sidebar:
     st.markdown("### Configuration")
     if not _get_api_key():
         entered = st.text_input(
-            "OpenAI API Key",
+            "Gemini API Key",
             type="password",
-            placeholder="sk-...",
-            help="Get your key at platform.openai.com/api-keys",
+            placeholder="AIza...",
+            help="Free key at aistudio.google.com — no credit card needed",
         )
         if entered:
-            st.session_state["openai_api_key"] = entered
+            st.session_state["gemini_api_key"] = entered
             st.success("Key saved for this session.")
             st.rerun()
         st.info(
-            "Enter your key above, or set it in:\n\n"
-            "- `.streamlit/secrets.toml` → `OPENAI_API_KEY = \"sk-...\"`\n"
-            "- `.env` → `OPENAI_API_KEY=sk-...`\n"
+            "Get a free key at **aistudio.google.com**\n\n"
+            "Or set it in:\n"
+            "- `.env` → `GEMINI_API_KEY=AIza...`\n"
+            "- `.streamlit/secrets.toml` → `GEMINI_API_KEY = \"AIza...\"`\n"
             "- Streamlit Cloud → *App settings → Secrets*"
         )
     else:
-        st.success("API key loaded.")
+        st.success("Gemini API key loaded.")
+
+    st.divider()
+    st.markdown("**Gemini free tier limits**")
+    st.caption("15 req/min · 1,500 req/day · No credit card")
+    st.caption(f"App enforces {MIN_CALL_INTERVAL}s between calls.")
+
+    last_call = st.session_state.get("last_api_call_time", 0)
+    if last_call:
+        remaining = max(0, int(MIN_CALL_INTERVAL - (time.time() - last_call)))
+        if remaining > 0:
+            st.warning(f"Next call ready in {remaining}s")
+        else:
+            st.success("Ready to analyze")
 
 # API key hard stop
 if not _get_api_key():
-    st.warning("Enter your OpenAI API key in the sidebar to continue.")
+    st.warning("Enter your Gemini API key in the sidebar to continue.")
     st.stop()
 
 # ── Module selector ───────────────────────────────────────────────────────────
@@ -514,13 +560,15 @@ if st.button("Analyze Now", type="primary", disabled=not input_ready):
                 st.session_state["last_result"] = result
                 st.session_state["last_cache_key"] = _cache_key
             except json.JSONDecodeError:
-                st.error("AI returned non-JSON response. Please retry.")
-            except openai.AuthenticationError:
-                st.error("Invalid API key. Check your OPENAI_API_KEY.")
-            except openai.RateLimitError:
-                st.error("Rate limit hit after retries. Wait 30 s and try again.")
+                st.error("Gemini returned non-JSON. Please retry.")
             except Exception as e:
-                st.error(str(e))
+                err = str(e)
+                if "api_key" in err.lower() or "permission" in err.lower() or "403" in err:
+                    st.error("Invalid Gemini API key. Check your key at aistudio.google.com.")
+                elif "429" in err or "quota" in err.lower() or "rate" in err.lower():
+                    st.error("Rate limit exceeded. Free tier: 15 req/min, 1500 req/day. Try again in 60s.")
+                else:
+                    st.error(err)
 
 if st.session_state.get("last_result") and st.session_state.get("last_cache_key") == _cache_key:
     result = st.session_state["last_result"]
