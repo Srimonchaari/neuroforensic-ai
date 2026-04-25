@@ -256,21 +256,33 @@ MODULE_META = {
 }
 
 # ── OpenAI Agents ─────────────────────────────────────────────────────────────
-def _call_with_retry(client: openai.OpenAI, **kwargs) -> str:
-    delays = [30, 60, 90]
-    for attempt, delay in enumerate(delays, 1):
-        try:
-            resp = client.chat.completions.create(**kwargs)
-            return resp.choices[0].message.content
-        except openai.RateLimitError:
-            if attempt == len(delays):
-                raise
-            st.toast(f"Rate limit hit — retrying in {delay}s… (attempt {attempt}/3)")
-            time.sleep(delay)
+MIN_CALL_INTERVAL = 22  # seconds — keeps usage under 3 RPM (free tier)
+
+def _rate_limit_wait():
+    """Block until 22 s have passed since the last API call, showing a progress bar."""
+    last = st.session_state.get("last_api_call_time", 0)
+    elapsed = time.time() - last
+    wait = MIN_CALL_INTERVAL - elapsed
+    if wait <= 0:
+        return
+    bar = st.progress(0.0, text=f"Cooling down ({int(wait)}s) to stay within rate limits…")
+    steps = int(wait * 10)
+    for i in range(steps):
+        time.sleep(0.1)
+        done = (i + 1) / steps
+        remaining = int(wait - (i + 1) * 0.1)
+        bar.progress(done, text=f"Ready in {remaining}s…")
+    bar.empty()
+
+
+def _call_api(client: openai.OpenAI, **kwargs) -> str:
+    _rate_limit_wait()
+    st.session_state["last_api_call_time"] = time.time()
+    resp = client.chat.completions.create(**kwargs)
+    return resp.choices[0].message.content
 
 
 def _compress_image(image_bytes: bytes, max_px: int = 512) -> tuple[bytes, str]:
-    """Resize to max_px on the longest side and return JPEG bytes + media type."""
     from PIL import Image as PILImage
     import io
     img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -284,7 +296,7 @@ def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
     client = openai.OpenAI(api_key=_get_api_key())
     image_bytes, media_type = _compress_image(image_bytes)
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-    raw = _call_with_retry(
+    raw = _call_api(
         client,
         model=MODEL,
         max_tokens=MAX_TOKENS,
@@ -304,7 +316,7 @@ def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
 
 def run_text_agent(report_text: str, module: str) -> dict:
     client = openai.OpenAI(api_key=_get_api_key())
-    raw = _call_with_retry(
+    raw = _call_api(
         client,
         model=MODEL,
         max_tokens=MAX_TOKENS,
