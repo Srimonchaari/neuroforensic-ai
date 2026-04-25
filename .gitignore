@@ -1,0 +1,60 @@
+# API Keys and secrets — NEVER commit these
+.env
+.env.local
+.env.production
+.env.*
+secrets.toml
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V7
+.Trashes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+logs/
+
+# Sample images (large files — download via script)
+samples/*.jpg
+samples/*.jpeg
+samples/*.png
+samples/*.dcm
