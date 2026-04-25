@@ -356,7 +356,11 @@ def _build_payload(system_prompt: str, parts: list) -> dict:
     return {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": [{"parts": parts}],
-        "generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.1},
+        "generationConfig": {
+            "maxOutputTokens": MAX_OUTPUT_TOKENS,
+            "temperature": 0.1,
+            "responseMimeType": "application/json",
+        },
     }
 
 
@@ -605,8 +609,8 @@ if st.button("Analyze Now", type="primary", disabled=not input_ready):
                     result = run_text_agent(input_text, selected_module)
                 st.session_state["last_result"] = result
                 st.session_state["last_cache_key"] = _cache_key
-            except json.JSONDecodeError:
-                st.error("Gemini returned non-JSON. Please retry.")
+            except json.JSONDecodeError as e:
+                st.error(f"Gemini returned non-JSON: {e.doc[:300]}")
             except Exception as e:
                 err = str(e)
                 if "api_key" in err.lower() or "permission" in err.lower() or "403" in err:
