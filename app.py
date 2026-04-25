@@ -3,7 +3,7 @@ NeuroForensic AI — Multi-Modal Death Investigation Assistant
 ============================================================
 Author: Aman
 Track: Build with Healthcare
-AI Provider: OpenAI GPT-4o (vision + text)
+AI Provider: OpenAI GPT-4o-mini (vision + text)
 
 Modules:
   1. Chest X-ray       — lung opacity, fluid, structural anomaly
@@ -22,6 +22,7 @@ import openai
 import base64
 import json
 import os
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -48,8 +49,8 @@ st.set_page_config(
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MODEL             = "gpt-4o"
-MAX_TOKENS        = 1024
+MODEL             = "gpt-4o-mini"
+MAX_TOKENS        = 500
 VALID_SEVERITIES  = ["Normal", "Suspicious", "Critical"]
 VALID_CONFIDENCES = ["Low", "Medium", "High"]
 
@@ -60,17 +61,11 @@ SEVERITY_COLORS = {
 }
 
 # ── System prompts (from agents/forensic_agent.md) ────────────────────────────
-BASE_RULES = """
-STRICT RULES — NEVER VIOLATE:
-- You are NOT a doctor. You do NOT diagnose.
-- You do NOT determine or suggest cause of death.
-- You NEVER name specific diseases, syndromes, or conditions.
-- You ALWAYS recommend expert review.
-- You ONLY describe what is visually or textually observable.
-- Output ONLY valid JSON. No text before or after. No markdown fences.
-- NEVER say homicide, suicide, accident, or murder.
-- Use only descriptive forensic language: patterns, densities, asymmetries.
-"""
+BASE_RULES = (
+    "Output ONLY valid JSON, no markdown. Describe only what is visually/textually "
+    "observable. Never diagnose, name diseases, or state cause of death. "
+    "Always recommend expert review."
+)
 
 SYSTEM_PROMPTS = {
 
@@ -261,12 +256,23 @@ MODULE_META = {
 }
 
 # ── OpenAI Agents ─────────────────────────────────────────────────────────────
+def _call_with_retry(client: openai.OpenAI, **kwargs) -> str:
+    delays = [5, 10, 15]
+    for attempt, delay in enumerate(delays, 1):
+        try:
+            resp = client.chat.completions.create(**kwargs)
+            return resp.choices[0].message.content
+        except openai.RateLimitError:
+            if attempt == len(delays):
+                raise
+            time.sleep(delay)
+
+
 def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
-    """Sends image to GPT-4o vision with forensic system prompt."""
     client = openai.OpenAI(api_key=_get_api_key())
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-
-    response = client.chat.completions.create(
+    raw = _call_with_retry(
+        client,
         model=MODEL,
         max_tokens=MAX_TOKENS,
         messages=[
@@ -274,40 +280,27 @@ def run_image_agent(image_bytes: bytes, media_type: str, module: str) -> dict:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{media_type};base64,{b64}",
-                            "detail": "high"
-                        }
-                    },
-                    {
-                        "type": "text",
-                        "text": f"Analyze this {module} for forensic screening. Return JSON only."
-                    }
-                ]
-            }
-        ]
+                    {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{b64}", "detail": "low"}},
+                    {"type": "text", "text": "Return JSON only."},
+                ],
+            },
+        ],
     )
-    return _parse(response.choices[0].message.content)
+    return _parse(raw)
 
 
 def run_text_agent(report_text: str, module: str) -> dict:
-    """Sends text to GPT-4o with toxicology system prompt."""
     client = openai.OpenAI(api_key=_get_api_key())
-
-    response = client.chat.completions.create(
+    raw = _call_with_retry(
+        client,
         model=MODEL,
         max_tokens=MAX_TOKENS,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPTS[module]},
-            {
-                "role": "user",
-                "content": f"Analyze this toxicology report:\n\n{report_text}\n\nReturn JSON only."
-            }
-        ]
+            {"role": "user", "content": f"Analyze:\n\n{report_text}\n\nReturn JSON only."},
+        ],
     )
-    return _parse(response.choices[0].message.content)
+    return _parse(raw)
 
 
 def _parse(raw: str) -> dict:
@@ -494,30 +487,34 @@ else:  # Toxicology text
 st.divider()
 st.subheader("Step 3 — Run forensic screening")
 
+# Build a cache key from the current input so changing input invalidates the cache
+_cache_key = f"{selected_module}::{selected_sample if 'selected_sample' in dir() else ''}::{hash(input_bytes or b'') if input_bytes else hash(input_text or '')}"
+
 if st.button("Analyze Now", type="primary", disabled=not input_ready):
-    with st.spinner(f"Running {selected_module} forensic analysis via GPT-4o..."):
-        try:
-            if meta["input_type"] == "image":
-                result = run_image_agent(input_bytes, media_type, selected_module)
-            else:
-                result = run_text_agent(input_text, selected_module)
+    if st.session_state.get("last_cache_key") != _cache_key:
+        with st.spinner(f"Running {selected_module} analysis..."):
+            try:
+                if meta["input_type"] == "image":
+                    result = run_image_agent(input_bytes, media_type, selected_module)
+                else:
+                    result = run_text_agent(input_text, selected_module)
+                st.session_state["last_result"] = result
+                st.session_state["last_cache_key"] = _cache_key
+            except json.JSONDecodeError:
+                st.error("AI returned non-JSON response. Please retry.")
+            except openai.AuthenticationError:
+                st.error("Invalid API key. Check your OPENAI_API_KEY.")
+            except openai.RateLimitError:
+                st.error("Rate limit hit after retries. Wait 30 s and try again.")
+            except Exception as e:
+                st.error(str(e))
 
-            if validate_result(result):
-                render_report(result)
-            else:
-                st.error(
-                    "Report generation failed: AI returned unexpected format. "
-                    "Please retry."
-                )
-
-        except json.JSONDecodeError:
-            st.error("Analysis failed: AI returned non-JSON response. Please retry.")
-        except openai.AuthenticationError:
-            st.error("Invalid API key. Check OPENAI_API_KEY in your .env file.")
-        except openai.RateLimitError:
-            st.error("Rate limit hit. Wait 30 seconds and retry.")
-        except Exception as e:
-            st.error(f"Analysis unavailable. Please retry. ({type(e).__name__}: {e})")
+if st.session_state.get("last_result") and st.session_state.get("last_cache_key") == _cache_key:
+    result = st.session_state["last_result"]
+    if validate_result(result):
+        render_report(result)
+    else:
+        st.error("Report generation failed: unexpected format. Please retry.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("---")
