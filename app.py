@@ -256,30 +256,34 @@ MODULE_META = {
 }
 
 # ── OpenAI Agents ─────────────────────────────────────────────────────────────
-MIN_CALL_INTERVAL = 22  # seconds — keeps usage under 3 RPM (free tier)
+MIN_CALL_INTERVAL = 25  # seconds — safe margin under 3 RPM (free tier)
 
 def _rate_limit_wait():
-    """Block until 22 s have passed since the last API call, showing a progress bar."""
     last = st.session_state.get("last_api_call_time", 0)
-    elapsed = time.time() - last
-    wait = MIN_CALL_INTERVAL - elapsed
+    wait = MIN_CALL_INTERVAL - (time.time() - last)
     if wait <= 0:
         return
-    bar = st.progress(0.0, text=f"Cooling down ({int(wait)}s) to stay within rate limits…")
     steps = int(wait * 10)
+    bar = st.progress(0.0, text=f"Rate limit cooldown — ready in {int(wait)}s…")
     for i in range(steps):
         time.sleep(0.1)
-        done = (i + 1) / steps
-        remaining = int(wait - (i + 1) * 0.1)
-        bar.progress(done, text=f"Ready in {remaining}s…")
+        bar.progress((i + 1) / steps, text=f"Ready in {max(0, int(wait - (i+1)*0.1))}s…")
     bar.empty()
 
 
 def _call_api(client: openai.OpenAI, **kwargs) -> str:
     _rate_limit_wait()
     st.session_state["last_api_call_time"] = time.time()
-    resp = client.chat.completions.create(**kwargs)
-    return resp.choices[0].message.content
+    try:
+        resp = client.chat.completions.create(**kwargs)
+        return resp.choices[0].message.content
+    except openai.RateLimitError:
+        # Page reload resets session timer — wait one full window and retry once
+        st.warning("Rate limit hit — waiting 30 s then retrying once…")
+        time.sleep(30)
+        st.session_state["last_api_call_time"] = time.time()
+        resp = client.chat.completions.create(**kwargs)
+        return resp.choices[0].message.content
 
 
 def _compress_image(image_bytes: bytes, max_px: int = 512) -> tuple[bytes, str]:
@@ -329,14 +333,25 @@ def run_text_agent(report_text: str, module: str) -> dict:
 
 
 def _parse(raw: str) -> dict:
-    """Strips markdown fences and parses JSON."""
+    import re
     raw = raw.strip()
-    if raw.startswith("```"):
-        parts = raw.split("```")
-        raw = parts[1] if len(parts) > 1 else raw
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    # Strip markdown fences (```json ... ``` or ``` ... ```)
+    fence = re.search(r"```(?:json)?\s*(.*?)\s*```", raw, re.DOTALL)
+    if fence:
+        raw = fence.group(1)
+    # Try direct parse first
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+    # Fall back: extract first {...} block from anywhere in the text
+    obj = re.search(r"\{.*\}", raw, re.DOTALL)
+    if obj:
+        try:
+            return json.loads(obj.group())
+        except json.JSONDecodeError:
+            pass
+    raise json.JSONDecodeError("No valid JSON found in model response", raw, 0)
 
 
 # ── Validation (from output_agent.md) ────────────────────────────────────────
@@ -423,6 +438,21 @@ with st.sidebar:
         )
     else:
         st.success("API key loaded.")
+
+    st.divider()
+    st.markdown("**OpenAI rate limits**")
+    st.caption("Free tier: 3 req/min, 200 req/day")
+    st.caption("Tier 1 (add $5 credit): 500 req/min")
+    st.caption(f"App enforces {MIN_CALL_INTERVAL}s between calls automatically.")
+
+    last_call = st.session_state.get("last_api_call_time", 0)
+    if last_call:
+        elapsed = time.time() - last_call
+        remaining = max(0, int(MIN_CALL_INTERVAL - elapsed))
+        if remaining > 0:
+            st.warning(f"Next call ready in {remaining}s")
+        else:
+            st.success("Ready to analyze")
 
 # API key hard stop
 if not _get_api_key():
@@ -530,7 +560,7 @@ if st.button("Analyze Now", type="primary", disabled=not input_ready):
             except openai.AuthenticationError:
                 st.error("Invalid API key. Check your OPENAI_API_KEY.")
             except openai.RateLimitError:
-                st.error("Rate limit hit after retries. Wait 30 s and try again.")
+                st.error("Rate limit still exceeded. Your free tier allows 3 req/min and 200 req/day. Add $5 credit at platform.openai.com to unlock Tier 1.")
             except Exception as e:
                 st.error(str(e))
 
